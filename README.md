@@ -17,9 +17,6 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000, or the local URL printed in your terminal if that
-port is already taken. Press Ctrl+C to stop the server.
-
 `npm ci` installs the exact dependency versions in `package-lock.json`. Use
 `npm install package-name` when intentionally adding a dependency, and commit
 both package files after doing so.
