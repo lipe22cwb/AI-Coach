@@ -58,22 +58,6 @@ Read [the project guide](docs/PROJECT-GUIDE.md) for how the files connect and wh
 to begin when adding real gameplay. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
 making a team change.
 
-## Useful commands
-
-| Command                | What it does                                    |
-| ---------------------- | ----------------------------------------------- |
-| `npm run dev`          | Start the local development server              |
-| `npm run format`       | Apply the shared formatting rules               |
-| `npm run format:check` | Check formatting without changing files         |
-| `npm run typecheck`    | Check TypeScript                                |
-| `npm run build`        | Create the static export in `out/`              |
-| `npm run check`        | Check formatting, build and TypeScript together |
-
-GitHub runs the same checks on pushes and pull requests using
-`.github/workflows/check.yml`. This workflow validates the source; it does not
-publish the site. GitHub-hosted checks can only be verified after the source is
-pushed to the team's repository.
-
 ## Add this source to the team repository
 
 For a repository dedicated to this app, put the **contents** of the extracted
