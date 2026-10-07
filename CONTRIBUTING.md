@@ -47,20 +47,6 @@ For example:
 Keep comments accurate when the code changes. Remove a preview-only comment
 when the feature becomes real, and update the README's status at the same time.
 
-## Formatting and dependencies
-
-Prettier provides the formatting rules through `.prettierrc.json`. If you use the
-Prettier extension in VS Code, it can apply the same rules on save. The command
-line formatter also works without that extension.
-
-Commit `package.json` and `package-lock.json` together when changing dependencies.
-Teammates and GitHub use `npm ci` to install those locked versions.
-
-Installed packages, build output, logs and local environment files are ignored
-by Git. Fonts, their licence files and other required source assets belong in
-the repository. There are no secrets or local environment requirements in the
-current prototype.
-
 ## Check an interface change
 
 Look at a desktop width and a phone width. Check that the board is square, the
