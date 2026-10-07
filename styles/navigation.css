@@ -1,0 +1,88 @@
+/* NAVIGATION — independent space for brand, links and account. */
+.site-header {
+  background: #111111;
+}
+
+/* Give the brand, navigation and account control their own columns.
+   The same outer gutter is used by the page below. */
+.nav-shell {
+  width: calc(100% - clamp(40px, 6vw, 128px));
+  min-height: 94px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(400px, 2fr) minmax(130px, 1fr);
+  align-items: center;
+  gap: 28px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 13px;
+  font-family: var(--heading-font);
+  font-size: 27px;
+  font-weight: 750;
+  letter-spacing: -0.6px;
+}
+.brand-mine {
+  width: 37px;
+  height: 37px;
+  flex-shrink: 0;
+}
+
+/* Spread the links out, but stop them drifting too far apart on wide monitors. */
+.main-nav {
+  width: 100%;
+  max-width: 660px;
+  height: 94px;
+  justify-self: center;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+.nav-item:hover {
+  color: #fff;
+}
+.nav-item.active {
+  color: #fff;
+}
+.nav-item.active svg {
+  color: var(--red);
+}
+/* The underline identifies Play as the current page. */
+.nav-item.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  background: var(--red);
+  border-radius: 3px 3px 0 0;
+}
+
+.sign-in {
+  justify-self: end;
+  padding: 11px 24px;
+  border-radius: 6px;
+  background: #f5f5f5;
+  color: #111;
+  font-weight: 650;
+}
+.sign-in:hover {
+  background: #d9d9d9;
+}

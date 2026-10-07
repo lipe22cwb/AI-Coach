@@ -1,0 +1,140 @@
+/* GAME — a single surface, with the board taking visual priority. */
+.game-panel {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.game-stats {
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 18px 28px;
+}
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+.stat-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+/* Tabular numbers keep the counter width steady when its digits change. */
+.stat-value {
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+.stat-total {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.new-game {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  padding: 11px 14px;
+  background: #262626;
+  color: #eee;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.new-game:hover {
+  background: #323232;
+}
+
+.board-area {
+  padding: 12px 26px 24px;
+}
+/* The board supplies --board-columns from lib/game-settings.ts.
+   Cap its width so the square cells stay manageable on large monitors. */
+.minesweeper-board {
+  width: min(100%, 720px, max(480px, calc(100svh - 360px)));
+  margin: auto;
+  padding: 5px;
+  display: grid;
+  grid-template-columns: repeat(var(--board-columns, 16), minmax(0, 1fr));
+  gap: 3px;
+  background: #101010;
+  border-radius: 5px;
+}
+/* aspect-ratio keeps every square the same shape as the board resizes. */
+.cell {
+  min-width: 0;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: clamp(12px, 1.4vw, 22px);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+/* A small inset shadow makes covered squares look raised without extra borders. */
+.cell.unrevealed {
+  background: #313131;
+  box-shadow:
+    inset 0 1px 0 #414141,
+    inset 0 -2px 0 #252525;
+}
+.cell.unrevealed:hover {
+  background: #3c3c3c;
+}
+.cell.revealed {
+  background: #1c1c1c;
+}
+.cell.flagged {
+  background: #3c2024;
+  box-shadow:
+    inset 0 1px 0 #573039,
+    inset 0 -2px 0 #281619;
+}
+.cell-flag {
+  width: 46%;
+  height: 46%;
+  max-width: 21px;
+  color: #ff626c;
+}
+.number-one {
+  color: #f1f1f1;
+}
+.number-two {
+  color: #ff747d;
+}
+.number-three {
+  color: #c9c9c9;
+}
+
+.board-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 0 28px 20px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.board-dimensions,
+.board-instructions {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.footer-divider {
+  width: 1px;
+  height: 11px;
+  margin: 0 3px;
+  background: #444;
+}

@@ -1,0 +1,227 @@
+/* TABLET */
+/* Make room for both columns before switching to the stacked layout. */
+@media (max-width: 1100px) {
+  .nav-shell {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 20px;
+  }
+  .main-nav {
+    gap: 10px;
+    max-width: 500px;
+  }
+  .nav-item {
+    padding: 0 6px;
+    gap: 7px;
+  }
+  .play-layout {
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 24px;
+  }
+  .game-stats {
+    padding: 18px;
+    gap: 22px;
+  }
+  .board-area {
+    padding: 10px 16px 20px;
+  }
+  .board-footer {
+    padding: 0 18px 20px;
+  }
+  .board-instructions {
+    display: none;
+  }
+  .coach-content {
+    padding: 0 20px 22px;
+  }
+  .coach-toggle {
+    padding: 18px;
+    gap: 9px;
+  }
+}
+
+/* At this width the coach moves below the board. */
+@media (max-width: 860px) {
+  .play-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .coach-sidebar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    align-items: start;
+    gap: 24px;
+  }
+  .minesweeper-board {
+    width: min(100%, 660px);
+  }
+  .nav-item svg {
+    display: none;
+  }
+  .brand {
+    font-size: 24px;
+    gap: 9px;
+  }
+  .brand-mine {
+    width: 30px;
+    height: 30px;
+  }
+  .sign-in {
+    padding: 10px 18px;
+  }
+}
+
+/* MOBILE */
+/* Put the navigation on a second row and give the game most of the phone width. */
+@media (max-width: 600px) {
+  .nav-shell,
+  .page-shell {
+    width: calc(100% - 32px);
+  }
+  .nav-shell {
+    grid-template-columns: 1fr auto;
+    gap: 0;
+  }
+  .brand {
+    min-height: 74px;
+    font-size: 26px;
+  }
+  .sign-in {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .main-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 50px;
+    gap: 12px;
+  }
+  .nav-item {
+    padding: 0 3px;
+    font-size: 13px;
+  }
+  .nav-item.active::after {
+    left: 3px;
+    right: 3px;
+  }
+  .page-shell {
+    padding-top: 27px;
+  }
+  .page-heading {
+    margin-bottom: 22px;
+    gap: 12px;
+  }
+  h1 {
+    font-size: 42px;
+    letter-spacing: -1px;
+  }
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 1.4px;
+  }
+  .page-subtitle {
+    font-size: 14px;
+  }
+  .session-info {
+    display: none;
+  }
+  .preview-note {
+    display: none;
+  }
+  .mode-row {
+    margin-bottom: 17px;
+  }
+  .mode-selector {
+    width: 100%;
+    gap: 10px;
+  }
+  .mode-button {
+    flex: 1;
+    padding: 0 10px;
+    gap: 7px;
+    font-size: 13px;
+  }
+  .game-stats {
+    min-height: 82px;
+    padding: 14px 12px;
+    gap: 18px;
+  }
+  .stat {
+    gap: 0;
+  }
+  .stat > svg {
+    display: none;
+  }
+  .stat-label {
+    font-size: 10px;
+  }
+  .stat-value {
+    font-size: 22px;
+  }
+  .stat-total {
+    font-size: 11px;
+  }
+  .new-game {
+    padding: 10px;
+    font-size: 11px;
+    gap: 6px;
+  }
+  .new-game svg {
+    width: 13px;
+  }
+  .board-area {
+    padding: 0 9px 17px;
+  }
+  .minesweeper-board {
+    padding: 3px;
+    gap: 2px;
+  }
+  .cell {
+    border-radius: 2px;
+    font-size: 12px;
+  }
+  .board-footer {
+    padding: 0 14px 17px;
+    font-size: 11px;
+  }
+  .coach-sidebar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .focus-toggle {
+    padding-bottom: 12px;
+    min-height: 46px;
+  }
+  .coach-content h3 {
+    font-size: 32px;
+  }
+  .page-footer {
+    margin-top: 20px;
+    font-size: 11px;
+  }
+  .page-footer > span {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .game-stats {
+    gap: 12px;
+  }
+  .new-game {
+    padding: 8px;
+  }
+  .new-game svg {
+    display: none;
+  }
+  .mode-button {
+    font-size: 12px;
+  }
+}
+
+/* REDUCED MOTION */
+/* Respect the device setting for people who prefer less animation. */
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a,
+  .focus-chevron {
+    transition: none;
+  }
+}

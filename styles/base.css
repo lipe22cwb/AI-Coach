@@ -1,0 +1,81 @@
+/* GLOBAL */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+}
+button,
+a {
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+button {
+  border: 0;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 5px;
+}
+::selection {
+  background: #b62634;
+  color: white;
+}
+summary {
+  cursor: pointer;
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::marker {
+  content: "";
+}
+
+/* Keep explanatory text available to screen readers without showing it. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The skip link stays off-screen until someone tabs to it. */
+.skip-link {
+  position: fixed;
+  top: -70px;
+  left: 24px;
+  z-index: 10;
+  padding: 12px 18px;
+  background: #fff;
+  color: #111;
+  border-radius: 5px;
+}
+.skip-link:focus {
+  top: 12px;
+}

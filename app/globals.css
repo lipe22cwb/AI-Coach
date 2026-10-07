@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* This file loads the styles in one place. Edit the named files below rather
+   than growing a single stylesheet: theme = colours, layout = page structure,
+   game = board and stats, coaching = sidebar, responsive = smaller screens.
+   Keep responsive last so those overrides win over the desktop defaults. */
+@import "../styles/theme.css";
+@import "../styles/base.css";
+@import "../styles/navigation.css";
+@import "../styles/layout.css";
+@import "../styles/game.css";
+@import "../styles/coaching.css";
+@import "../styles/responsive.css";

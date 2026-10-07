@@ -1,0 +1,128 @@
+/* PAGE */
+.page-shell {
+  width: calc(100% - clamp(40px, 6vw, 128px));
+  margin: auto;
+  padding-top: 36px;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+}
+h1 {
+  margin: 0;
+  font-family: var(--heading-font);
+  font-size: clamp(38px, 3.6vw, 58px);
+  font-weight: 750;
+  line-height: 1.05;
+  letter-spacing: -1.8px;
+}
+.title-period {
+  color: var(--red);
+}
+.page-subtitle {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.session-info {
+  padding-bottom: 3px;
+  text-align: right;
+}
+.difficulty-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+.session-info > div {
+  display: flex;
+  gap: 20px;
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+.session-info > div > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.preview-note {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mode-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 21px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.mode-button.selected {
+  background: #b62634;
+  color: #fff;
+}
+.mode-button.selected:hover {
+  background: #c42b39;
+}
+.mode-button.ranked {
+  background: #202020;
+  color: #eee;
+}
+.mode-button.ranked svg {
+  color: var(--red);
+}
+.mode-button.ranked:hover {
+  background: #2a2a2a;
+}
+
+/* Let the game take the remaining width while the coach stays readable.
+   Smaller-screen overrides live in responsive.css. */
+.play-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  align-items: start;
+  gap: clamp(24px, 3vw, 56px);
+}
+
+/* FOOTER */
+.page-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 22px 0 26px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.page-footer p {
+  margin: 0;
+}
+.page-footer > span {
+  white-space: nowrap;
+}
