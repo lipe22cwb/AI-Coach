@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // The current prototype can be hosted as plain files from the out folder.
-  // Remove this setting when the app needs server routes or server-side auth.
-  output: "export",
+  // The Coaching tab needs a server: POST /api/coach runs the rule engine and
+  // (optionally) calls an AI provider. That is why the old `output: "export"`
+  // is gone — the app is now served by Node instead of as plain static files.
   devIndicators: false,
 };
 

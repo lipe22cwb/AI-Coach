@@ -216,6 +216,48 @@
   }
 }
 
+/* COACHING TAB */
+/* Narrow the control column before the report needs the full width. */
+@media (max-width: 1100px) {
+  .coach-layout {
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 24px;
+  }
+}
+
+/* Stack the controls above the report on tablets. */
+@media (max-width: 860px) {
+  .coach-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .coach-controls {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .coach-report-panel {
+    padding: 4px 16px 20px;
+  }
+  .coach-report-top {
+    gap: 14px;
+  }
+  .grade-badge {
+    width: 62px;
+    height: 62px;
+  }
+  .grade-letter {
+    font-size: 28px;
+  }
+  .coach-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .coach-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* REDUCED MOTION */
 /* Respect the device setting for people who prefer less animation. */
 @media (prefers-reduced-motion: reduce) {
@@ -223,5 +265,8 @@
   a,
   .focus-chevron {
     transition: none;
+  }
+  .coach-spin {
+    animation: none;
   }
 }

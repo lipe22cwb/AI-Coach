@@ -101,10 +101,12 @@ class in `ModeSelector`. New pages belong under `app/`; for example,
 `app/profile/page.tsx` would provide `/profile`. Once a page exists, change its
 navbar entry into a Next.js `Link` with the appropriate route.
 
-The project currently exports static files. Before adding server routes or
-server-side authentication, review `output: "export"` in `next.config.ts` and
-choose hosting that supports the server features. This guide marks the places
-to extend; it does not add those features to the prototype.
+The Coaching tab added a server route (`/api/coach`), so `output: "export"` was
+removed from `next.config.ts` and the app now needs a Node host. Follow the same
+pattern for future server work — accounts, ranking, saved profiles — by adding
+route handlers under `app/api/`. The rule engine in `lib/coach/` stays pure so it
+can also run in the browser when a route is not available. This guide marks the
+places to extend; it does not add those features to the prototype.
 
 ## What the project checks cover
 
