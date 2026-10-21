@@ -4,6 +4,16 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 
+import "../styles/theme.css";
+import "../styles/base.css";
+import "../styles/navigation.css";
+import "../styles/layout.css";
+import "../styles/game.css";
+import "../styles/coaching.css";
+import "../styles/account.css";
+import "../styles/profile.css";
+import "../styles/responsive.css";
+
 // These paths are relative to this file, not the browser URL.
 // Both fonts are included in public/fonts so groupmates can build without
 // downloading fonts from Google. Keep their licence files with them.
@@ -24,16 +34,23 @@ const robotoCondensed = localFont({
 // Next.js uses this for the browser tab, page description and favicon.
 export const metadata: Metadata = {
   title: "AI-Coach | Minesweeper",
-  description: "Practise Minesweeper with post-game feedback on patterns and decisions.",
+  description:
+    "Practise Minesweeper with post-game feedback on patterns and decisions.",
   icons: {
     icon: "/favicon.svg",
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: ReactNode;
+}>) {
   return (
-    // The font variables are available to every page through the html element.
-    <html lang="en" className={`${roboto.variable} ${robotoCondensed.variable}`}>
+    <html
+      lang="en"
+      className={`${roboto.variable} ${robotoCondensed.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

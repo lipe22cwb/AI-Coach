@@ -1,50 +1,114 @@
-import { Gamepad2, Settings2, UserRound, MessageSquare } from "lucide-react";
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Gamepad2,
+  MessageSquare,
+  Settings2,
+  UserRound,
+} from "lucide-react";
 
 import { MineLogo } from "./mine-logo";
 
-// Add navigation entries here. They are preview buttons until those pages exist;
-// when a page is ready, give its entry a route and render a Next.js Link instead.
 const navigationItems = [
-  { label: "Play", icon: Gamepad2, active: true },
-  { label: "Profile", icon: UserRound, active: false },
-  { label: "Coaching", icon: MessageSquare, active: false },
-  { label: "Settings", icon: Settings2, active: false },
+  {
+    label: "Play",
+    icon: Gamepad2,
+    route: "/",
+  },
+  {
+    label: "Profile",
+    icon: UserRound,
+    route: "/profile",
+  },
+  {
+    label: "Coaching",
+    icon: MessageSquare,
+    route: null,
+  },
+  {
+    label: "Settings",
+    icon: Settings2,
+    route: null,
+  },
 ];
 
 export function Navbar() {
+  const pathname = usePathname();
+
   return (
     <header className="site-header">
       <div className="nav-shell">
-        <a className="brand" href="/" aria-label="AI-Coach home">
+
+        {/* Logo / Home */}
+        <Link
+          className="brand"
+          href="/"
+          aria-label="AI-Coach home"
+        >
           <MineLogo className="brand-mine" />
           <span>AI-Coach</span>
-        </a>
+        </Link>
 
+        {/* Main navigation */}
         <nav className="main-nav" aria-label="Main navigation">
-          {/* Icon is capitalised so React treats it as a component in the loop. */}
-          {navigationItems.map(({ label, icon: Icon, active }) => (
-            <button
-              key={label}
-              type="button"
-              className={`nav-item${active ? " active" : ""}`}
-              aria-current={active ? "page" : undefined}
-              aria-disabled={!active}
-              title={active ? "Play" : `${label} — preview only`}
-            >
-              <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
-              <span>{label}</span>
-            </button>
-          ))}
+          {navigationItems.map(({ label, icon: Icon, route }) => {
+            const active = route ? pathname === route : false;
+
+            // Pages that currently exist
+            if (route) {
+              return (
+                <Link
+                  key={label}
+                  href={route}
+                  className={`nav-item${active ? " active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon
+                    size={18}
+                    strokeWidth={1.7}
+                    aria-hidden="true"
+                  />
+
+                  <span>{label}</span>
+                </Link>
+              );
+            }
+
+            // Coaching and Settings are visual placeholders for now
+            return (
+              <button
+                key={label}
+                type="button"
+                className="nav-item nav-item-preview"
+                title={`${label} page coming later`}
+              >
+                <Icon
+                  size={18}
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                />
+
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </nav>
 
-        <button
-          type="button"
-          className="sign-in"
-          aria-disabled="true"
-          title="Sign in — preview only"
+        {/* Sign In */}
+        <Link
+          href="/sign-in"
+          className={`sign-in${
+            pathname === "/sign-in" ? " active" : ""
+          }`}
+          aria-current={
+            pathname === "/sign-in" ? "page" : undefined
+          }
         >
           Sign In
-        </button>
+        </Link>
+
       </div>
     </header>
   );

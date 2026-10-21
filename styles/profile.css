@@ -1,0 +1,344 @@
+/* PROFILE — placeholder progression dashboard using the same game-first visual language. */
+.profile-page {
+  padding-bottom: 44px;
+}
+.profile-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 28px;
+}
+.profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.preview-badge {
+  padding: 8px 11px;
+  border: 1px solid #303030;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.profile-play-link {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 14px;
+  border-radius: 6px;
+  background: #252525;
+  color: #eee;
+  font-size: 13px;
+  font-weight: 600;
+}
+.profile-play-link:hover {
+  background: #303030;
+}
+
+.profile-summary {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.5fr) repeat(4, minmax(130px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.rank-card,
+.profile-stat {
+  min-width: 0;
+  background: var(--surface);
+}
+.rank-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px;
+}
+.rank-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 7px;
+  background: #3a2414;
+  color: #f0b567;
+}
+.rank-card > div:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.rank-card strong {
+  font-family: var(--heading-font);
+  font-size: 28px;
+  line-height: 1;
+}
+.rank-card small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.profile-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 22px;
+}
+.profile-stat svg {
+  color: var(--red);
+}
+.profile-stat span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.profile-stat strong {
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.62fr);
+  gap: 24px;
+}
+.profile-panel {
+  min-width: 0;
+  padding: 24px;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.panel-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+.panel-heading-row > svg {
+  flex-shrink: 0;
+  color: var(--red);
+}
+.profile-panel h2 {
+  margin: 7px 0 0;
+  font-family: var(--heading-font);
+  font-size: 28px;
+  line-height: 1.08;
+}
+.profile-panel > p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.current-focus-card {
+  min-height: 290px;
+}
+.focus-progress {
+  margin-top: 28px;
+}
+.focus-progress > div:first-child,
+.breakdown-item > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.progress-track {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  background: #292929;
+  border-radius: 999px;
+}
+.progress-track > span {
+  display: block;
+  height: 100%;
+  background: var(--red);
+  border-radius: inherit;
+}
+.panel-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 26px;
+  padding: 0;
+  background: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+.panel-action:hover {
+  color: #d4d4d4;
+}
+.improvement-card {
+  display: flex;
+  flex-direction: column;
+}
+.improvement-number {
+  margin: 4px 0 10px;
+  color: #81d39a;
+  font-family: var(--heading-font);
+  font-size: 54px;
+  font-weight: 750;
+  line-height: 1;
+}
+.comparison-note {
+  margin-top: auto;
+  padding-top: 24px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.breakdown-card {
+  grid-column: 1;
+}
+.breakdown-list {
+  display: grid;
+  gap: 19px;
+}
+.breakdown-item strong {
+  color: #fff;
+}
+.history-card {
+  grid-column: 2;
+  grid-row: 2;
+}
+.recent-games {
+  display: grid;
+}
+.recent-game {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(90px, 1.4fr) auto auto auto auto;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 0;
+  border-top: 1px solid var(--line);
+}
+.recent-game:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.result-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.result-dot.win {
+  background: #76c890;
+}
+.result-dot.loss {
+  background: var(--red);
+}
+.recent-result {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.recent-result strong {
+  font-size: 13px;
+}
+.recent-result span,
+.recent-detail,
+.recent-mistakes {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.recent-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.recent-mistakes {
+  white-space: nowrap;
+}
+.recent-open {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: #232323;
+  color: var(--text-secondary);
+}
+.recent-open:hover {
+  background: #2c2c2c;
+  color: #fff;
+}
+.profile-disclaimer {
+  margin: 22px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1100px) {
+  .profile-summary {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .rank-card {
+    grid-column: 1 / -1;
+  }
+  .profile-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .history-card {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .profile-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .profile-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+  .breakdown-card,
+  .history-card {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .profile-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rank-card {
+    grid-column: 1 / -1;
+  }
+  .profile-stat {
+    padding: 18px;
+  }
+  .recent-game {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  .recent-detail,
+  .recent-mistakes {
+    display: none;
+  }
+}
