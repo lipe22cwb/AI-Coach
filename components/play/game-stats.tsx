@@ -4,11 +4,15 @@ type GameStatsProps = {
   minesRemaining: number;
   totalMines: number;
   elapsedTime: string;
+  onNewGame: () => void;
 };
 
-// The board supplies these values. When gameplay is added, this component can
-// show live stats without knowing how mines or the timer are calculated.
-export function GameStats({ minesRemaining, totalMines, elapsedTime }: GameStatsProps) {
+export function GameStats({
+  minesRemaining,
+  totalMines,
+  elapsedTime,
+  onNewGame,
+}: GameStatsProps) {
   return (
     <div className="game-stats">
       <div className="stat">
@@ -30,13 +34,7 @@ export function GameStats({ minesRemaining, totalMines, elapsedTime }: GameStats
         </div>
       </div>
 
-      {/* The control is part of the mockup; it does not reset a game yet. */}
-      <button
-        type="button"
-        className="new-game"
-        aria-disabled="true"
-        title="New game — preview only"
-      >
+      <button type="button" className="new-game" onClick={onNewGame}>
         <RotateCcw size={16} aria-hidden="true" />
         <span>New Game</span>
       </button>
