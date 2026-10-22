@@ -17,29 +17,46 @@ export default function Home() {
 
   return (
     <>
-      <a className="skip-link" href="#main-content">Skip to game</a>
+      <a className="skip-link" href="#main-content">
+        Skip to game
+      </a>
       <Navbar />
 
       <main className="page-shell" id="main-content">
         <div className="page-heading">
           <div>
             <p className="eyebrow">PLAY. LEARN. IMPROVE.</p>
-            <h1>Minesweeper<span className="title-period">.</span></h1>
+            <h1>
+              Minesweeper<span className="title-period">.</span>
+            </h1>
             <p className="page-subtitle">Learn how to really play</p>
           </div>
 
-          <div className="session-info" aria-label={`${settings.label} board: ${settings.rows} by ${settings.columns}, ${settings.mines} mines`}>
+          <div
+            className="session-info"
+            aria-label={`${settings.label} board: ${settings.rows} by ${settings.columns}, ${settings.mines} mines`}
+          >
             <span className="difficulty-label">{settings.label}</span>
             <div>
-              <span><Grid2X2 size={14} aria-hidden="true" /> {settings.rows} × {settings.columns}</span>
-              <span><Flag size={14} aria-hidden="true" /> {settings.mines} mines</span>
+              <span>
+                <Grid2X2 size={14} aria-hidden="true" /> {settings.rows} ×{" "}
+                {settings.columns}
+              </span>
+              <span>
+                <Flag size={14} aria-hidden="true" /> {settings.mines} mines
+              </span>
             </div>
           </div>
         </div>
 
         <div className="difficulty-row" role="group" aria-label="Choose board difficulty">
           <label htmlFor="difficulty-select">Difficulty</label>
-          <select id="difficulty-select" className="difficulty-select" value={difficulty} onChange={(event) => setDifficulty(event.target.value as Difficulty)}>
+          <select
+            id="difficulty-select"
+            className="difficulty-select"
+            value={difficulty}
+            onChange={(event) => setDifficulty(event.target.value as Difficulty)}
+          >
             <option value="beginner">Beginner — 9 × 9, 10 mines</option>
             <option value="intermediate">Intermediate — 16 × 16, 40 mines</option>
             <option value="expert">Expert — 16 × 30, 99 mines</option>
@@ -62,7 +79,9 @@ export default function Home() {
 
         <footer className="page-footer">
           <p>Practice with feedback. Play ranked without live coaching.</p>
-          <span>{settings.rows} × {settings.columns} · {settings.mines} mines</span>
+          <span>
+            {settings.rows} × {settings.columns} · {settings.mines} mines
+          </span>
         </footer>
       </main>
     </>
