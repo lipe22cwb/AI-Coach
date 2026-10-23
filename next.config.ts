@@ -1,7 +1,8 @@
+
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // API routes need a Node.js server instead of a static export.
+  // API routes for AI Coaching and Ranked require a server.
   devIndicators: false,
 };
 

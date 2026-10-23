@@ -1,63 +1,120 @@
+
 # AI-Coach
 
-The first visual prototype of our Minesweeper coaching platform. The Play screen
-opens straight onto a 16 × 16 board, with Practice selected and coaching tools
-alongside it.
+AI-Coach is an AI-powered Minesweeper coaching platform designed to help players improve their skills through gameplay analysis, personalized feedback, and competitive play.
 
-Built with Next.js App Router, React, TypeScript and Tailwind CSS 4.
+Built with Next.js, React, TypeScript, Tailwind CSS, and Supabase.
 
-## Run the project
+## Getting Started
 
-Use Node.js 24 if possible. Node.js 22 or newer is required; `.nvmrc` records the
-version used by the GitHub checks. Open the folder containing `package.json`,
-then run:
+Use Node.js 22 or newer.
+
+Install dependencies:
 
 ```bash
 npm ci
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-`npm ci` installs the exact dependency versions in `package-lock.json`. Use
-`npm install package-name` when intentionally adding a dependency, and commit
-both package files after doing so.
+Open http://localhost:3000 in your browser.
 
-Roboto and Roboto Condensed are included in `public/fonts`. Keep that folder
-with the source files; a missing font will stop the build. No API keys are
-needed for this version.
+## Current Features
 
-## What is implemented
+### Minesweeper Gameplay
+- Beginner, Intermediate, and Expert difficulties
+- First-click protection
+- Revealing and flagging cells
+- Chording functionality
+- Game timer and mine counter
+- New Game button
+- Win and loss detection
 
-- Responsive Play screen with AI-Coach branding and the red mine logo.
-- Static Minesweeper board, sample stats and sample coaching feedback.
-- Node API for saving and reading local Ranked wins, grouped by board setup.
-- Current focus starts collapsed; AI Coach starts open. Both can be opened and
-  closed with the mouse or keyboard.
-- Keyboard focus styles, a skip link and reduced-motion support.
+### User Accounts
+- Sign-in and account creation pages
+- Supabase email/password authentication
+- Sign-out functionality
+- Player profile page with placeholder statistics
 
-The board is not playable yet. New Game, Ranked, Sign In and the other navigation
-items are placeholders. The timer is fixed, and the coaching report is sample
-content rather than analysis of the displayed board. The Ranked API is a local
-prototype: it has no accounts or server-side game verification and is not a
-production global leaderboard. There is no AI connection in this version.
+Authentication requires a configured Supabase project.
 
-## Where to make changes
+### AI Coaching
+- Dedicated Coaching page
+- Game analysis using a rule-based engine
+- Optional AI-generated explanations through an external provider
+- Reports highlighting gameplay decisions and improvements
+- Coaching API at `/api/coach`
 
-| Change                                          | Start here                                                 |
-| ----------------------------------------------- | ---------------------------------------------------------- |
-| Heading, subtitle, footer or screen arrangement | `app/page.tsx`                                             |
-| Browser title, description or fonts             | `app/layout.tsx`                                           |
-| Colours and font choices                        | `styles/theme.css`                                         |
-| Page width, sidebar width or main spacing       | `styles/layout.css`                                        |
-| Navigation and brand placement                  | `components/play/navbar.tsx`, `styles/navigation.css`      |
-| Local Ranked results API                        | `app/api/ranked-results/route.ts`, `lib/ranked-results.ts` |
-| Board appearance and stats styling              | `styles/game.css`                                          |
-| Displayed board squares and sample time         | `components/play/board-fixture.ts`                         |
-| Board size, mine count and difficulty label     | `lib/game-settings.ts`                                     |
-| Sample coaching text                            | `components/play/coach-preview.tsx`, `current-focus.tsx`   |
-| Coaching panel appearance                       | `styles/coaching.css`                                      |
-| Tablet and phone layouts                        | `styles/responsive.css`                                    |
+The Coaching page currently uses sample sessions rather than completed games from the live board.
 
-Read [the project guide](docs/PROJECT-GUIDE.md) for how the files connect and where
-to begin when adding real gameplay. See [the Ranked API contract](docs/RANKED-RESULTS-API.md)
-for request fields and prototype limitations. Read [CONTRIBUTING.md](CONTRIBUTING.md)
-before making a change.
+### Settings
+- Coaching style preferences
+- Explanation detail and experience settings
+- Personal improvement goals
+- Local browser storage for preferences
+
+Settings are not yet fully connected to user accounts or coaching responses.
+
+### Ranked System
+- Prototype Ranked results API at `/api/ranked-results`
+- Recording and retrieving submitted winning results
+- Results organized by board configuration
+
+Ranked gameplay, verified results, competitive ratings, and production database storage still need implementation.
+
+## Project Structure
+
+- `app/` - Website pages and API routes
+- `components/play/` - Minesweeper and navigation components
+- `components/account/` - Authentication components
+- `components/coach/` - Coaching interface
+- `components/settings/` - Settings interface
+- `lib/coach/` - Coaching analysis engine
+- `lib/supabase/` - Supabase connection helpers
+- `lib/settings/` - Settings preferences and storage
+- `docs/` - Project documentation
+- `styles/` - Website styling
+
+## Environment Variables
+
+Create a `.env.local` file to configure Supabase authentication and optional AI providers.
+
+Required for Supabase:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+Optional AI provider configuration is documented in `.env.example`.
+
+Never commit API keys or secret credentials.
+
+## Development Status
+
+The project is still under active development.
+
+Major remaining tasks include:
+- Recording and saving complete gameplay sessions
+- Connecting live gameplay to AI coaching
+- Persistent database storage
+- Real player statistics and game history
+- Fully functional Ranked mode
+- Leaderboards and player progression
+- Automated testing and deployment
+
+## Testing
+
+Run the project checks:
+
+```bash
+npm run check
+```
+
+This checks formatting, the production build, and TypeScript. It does not replace manual gameplay and integration testing.
+
+## Team Collaboration
+
+Team members develop features in separate Git branches before merging into master. Shared features should be tested together before changes are considered complete.

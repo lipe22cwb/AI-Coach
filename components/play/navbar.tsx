@@ -30,7 +30,7 @@ const navigationItems = [
   {
     label: "Coaching",
     icon: MessageSquare,
-    route: null,
+    route: "/coaching",
   },
   {
     label: "Settings",
