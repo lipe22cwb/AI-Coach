@@ -22,38 +22,42 @@ npm run dev
 both package files after doing so.
 
 Roboto and Roboto Condensed are included in `public/fonts`. Keep that folder
-with the source files; a missing font will stop the build. No environment
-variables or API keys are needed for this version.
+with the source files; a missing font will stop the build. No API keys are
+needed for this version.
 
 ## What is implemented
 
 - Responsive Play screen with AI-Coach branding and the red mine logo.
 - Static Minesweeper board, sample stats and sample coaching feedback.
+- Node API for saving and reading local Ranked wins, grouped by board setup.
 - Current focus starts collapsed; AI Coach starts open. Both can be opened and
   closed with the mouse or keyboard.
 - Keyboard focus styles, a skip link and reduced-motion support.
 
 The board is not playable yet. New Game, Ranked, Sign In and the other navigation
 items are placeholders. The timer is fixed, and the coaching report is sample
-content rather than analysis of the displayed board. There is no backend,
-account system, ranking system or AI connection in this version.
+content rather than analysis of the displayed board. The Ranked API is a local
+prototype: it has no accounts or server-side game verification and is not a
+production global leaderboard. There is no AI connection in this version.
 
 ## Where to make changes
 
-| Change                                          | Start here                                               |
-| ----------------------------------------------- | -------------------------------------------------------- |
-| Heading, subtitle, footer or screen arrangement | `app/page.tsx`                                           |
-| Browser title, description or fonts             | `app/layout.tsx`                                         |
-| Colours and font choices                        | `styles/theme.css`                                       |
-| Page width, sidebar width or main spacing       | `styles/layout.css`                                      |
-| Navigation and brand placement                  | `components/play/navbar.tsx`, `styles/navigation.css`    |
-| Board appearance and stats styling              | `styles/game.css`                                        |
-| Displayed board squares and sample time         | `components/play/board-fixture.ts`                       |
-| Board size, mine count and difficulty label     | `lib/game-settings.ts`                                   |
-| Sample coaching text                            | `components/play/coach-preview.tsx`, `current-focus.tsx` |
-| Coaching panel appearance                       | `styles/coaching.css`                                    |
-| Tablet and phone layouts                        | `styles/responsive.css`                                  |
+| Change                                          | Start here                                                 |
+| ----------------------------------------------- | ---------------------------------------------------------- |
+| Heading, subtitle, footer or screen arrangement | `app/page.tsx`                                             |
+| Browser title, description or fonts             | `app/layout.tsx`                                           |
+| Colours and font choices                        | `styles/theme.css`                                         |
+| Page width, sidebar width or main spacing       | `styles/layout.css`                                        |
+| Navigation and brand placement                  | `components/play/navbar.tsx`, `styles/navigation.css`      |
+| Local Ranked results API                        | `app/api/ranked-results/route.ts`, `lib/ranked-results.ts` |
+| Board appearance and stats styling              | `styles/game.css`                                          |
+| Displayed board squares and sample time         | `components/play/board-fixture.ts`                         |
+| Board size, mine count and difficulty label     | `lib/game-settings.ts`                                     |
+| Sample coaching text                            | `components/play/coach-preview.tsx`, `current-focus.tsx`   |
+| Coaching panel appearance                       | `styles/coaching.css`                                      |
+| Tablet and phone layouts                        | `styles/responsive.css`                                    |
 
 Read [the project guide](docs/PROJECT-GUIDE.md) for how the files connect and where
-to begin when adding real gameplay. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
-making a change.
+to begin when adding real gameplay. See [the Ranked API contract](docs/RANKED-RESULTS-API.md)
+for request fields and prototype limitations. Read [CONTRIBUTING.md](CONTRIBUTING.md)
+before making a change.

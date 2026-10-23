@@ -101,10 +101,18 @@ class in `ModeSelector`. New pages belong under `app/`; for example,
 `app/profile/page.tsx` would provide `/profile`. Once a page exists, change its
 navbar entry into a Next.js `Link` with the appropriate route.
 
-The project currently exports static files. Before adding server routes or
-server-side authentication, review `output: "export"` in `next.config.ts` and
-choose hosting that supports the server features. This guide marks the places
-to extend; it does not add those features to the prototype.
+The project now has a Node.js Route Handler at
+`app/api/ranked-results/route.ts`. `lib/ranked-results.ts` validates submissions,
+keeps wins separate by board size and mine count, and stores them in a local JSON
+file. The API accepts wins only and sorts each board setup by time.
+
+The JSON store is a local prototype, not shared production storage. There are no
+accounts or server-side move replay, so submitted results are not verified and
+must not be treated as a secure competitive leaderboard. Read
+[`RANKED-RESULTS-API.md`](RANKED-RESULTS-API.md) for the request contract and
+limitations. Since the route needs Node.js and writable persistent storage, the
+project no longer uses `output: "export"`; static-only hosting is not sufficient
+for this API.
 
 ## What the project checks cover
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -34,7 +35,7 @@ const navigationItems = [
   {
     label: "Settings",
     icon: Settings2,
-    route: null,
+    route: "/settings",
   },
 ];
 
@@ -46,19 +47,34 @@ export function Navbar() {
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
+    // Only connect when Supabase is configured.
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    ) {
+      setLoadingUser(false);
+      return;
+    }
+
     const supabase = createClient();
 
     async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      setUser(user);
-      setLoadingUser(false);
+        setUser(user);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoadingUser(false);
+      }
     }
 
     loadUser();
 
+    // Keep the navbar updated when a user signs in or out.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -74,10 +90,14 @@ export function Navbar() {
   async function handleSignOut() {
     const supabase = createClient();
 
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Sign out failed:", error.message);
+      return;
+    }
 
     setUser(null);
-
     router.push("/");
     router.refresh();
   }
@@ -116,7 +136,6 @@ export function Navbar() {
                     strokeWidth={1.7}
                     aria-hidden="true"
                   />
-
                   <span>{label}</span>
                 </Link>
               );
@@ -127,6 +146,7 @@ export function Navbar() {
                 key={label}
                 type="button"
                 className="nav-item nav-item-preview"
+                aria-disabled="true"
                 title={`${label} page coming later`}
               >
                 <Icon
@@ -134,7 +154,6 @@ export function Navbar() {
                   strokeWidth={1.7}
                   aria-hidden="true"
                 />
-
                 <span>{label}</span>
               </button>
             );
