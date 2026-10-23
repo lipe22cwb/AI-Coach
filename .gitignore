@@ -10,3 +10,6 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+
+# Internal Settings notes; keep these local to this workspace.
+/docs/SETTINGS-PAGE.md
