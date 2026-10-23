@@ -58,8 +58,10 @@
   padding: 12px 26px 24px;
 }
 /* The board supplies --board-columns from lib/game-settings.ts.
-   Cap its width so the square cells stay manageable on large monitors. */
+   Keep the grid responsive, and expose its width so cell text can scale to
+   the actual cell size (especially on the 30-column Expert board). */
 .minesweeper-board {
+  container-type: inline-size;
   width: min(100%, 720px, max(480px, calc(100svh - 360px)));
   margin: auto;
   padding: 5px;
@@ -77,7 +79,12 @@
   align-items: center;
   justify-content: center;
   border-radius: 3px;
-  font-size: clamp(12px, 1.4vw, 22px);
+  /* Scale labels with each cell instead of the viewport. A 30-column board
+     gets smaller numbers, while 9- and 16-column boards remain easy to read. */
+  font-size: clamp(8px, calc(100cqi / var(--board-columns, 16) * 0.55), 22px);
+  line-height: 1;
+  padding: 0;
+  border: 0;
   font-weight: 750;
   font-variant-numeric: tabular-nums;
   user-select: none;
@@ -114,7 +121,22 @@
   color: #ff747d;
 }
 .number-three {
-  color: #c9c9c9;
+  color: #ffbc74;
+}
+.number-four {
+  color: #f3ff74;
+}
+.number-five {
+  color: #74c3ff;
+}
+.number-six {
+  color: #8074ff;
+}
+.number-seven {
+  color: #ba74ff;
+}
+.number-eight {
+  color: #ef74ff;
 }
 
 .board-footer {
