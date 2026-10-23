@@ -14,6 +14,17 @@ export type SettingsPreferences = {
   competitiveness: Competitiveness;
 };
 
+/** The saved preference fields that can be shared with coaching features. */
+export type CoachPreferences = Pick<
+  SettingsPreferences,
+  | "coachingStyle"
+  | "explanationDetail"
+  | "experienceLevel"
+  | "selectedGoals"
+  | "customGoal"
+  | "competitiveness"
+>;
+
 export interface SettingsRepository {
   load(): Promise<SettingsPreferences>;
   save(preferences: SettingsPreferences): Promise<void>;
