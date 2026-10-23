@@ -24,11 +24,13 @@ export default function SignInPage() {
 
             <p className="eyebrow">BUILD YOUR HISTORY</p>
             <h2>
-              One profile. Every game. Better feedback over time<span className="title-period">.</span>
+              One profile. Every game. Better feedback over time
+              <span className="title-period">.</span>
             </h2>
             <p className="auth-copy-text">
-              Your account will eventually connect your Ranked record, game history, Current Focus,
-              and conversations with the AI coach. For now, this page is the visual shell for that system.
+              Your account will eventually connect your Ranked record, game history,
+              Current Focus, and conversations with the AI coach. For now, this page is
+              the visual shell for that system.
             </p>
 
             <div className="auth-benefits">

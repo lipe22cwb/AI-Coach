@@ -1,9 +1,7 @@
 import type { CoachPreferences, SettingsPreferences, SettingsRepository } from "./types";
 
 /** Select a safe copy of the coaching context from the full Settings record. */
-export function toCoachPreferences(
-  preferences: SettingsPreferences,
-): CoachPreferences {
+export function toCoachPreferences(preferences: SettingsPreferences): CoachPreferences {
   return {
     coachingStyle: preferences.coachingStyle,
     explanationDetail: preferences.explanationDetail,

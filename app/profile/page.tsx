@@ -48,7 +48,9 @@ export default function ProfilePage() {
             <h1>
               PlayerOne<span className="title-period">.</span>
             </h1>
-            <p className="page-subtitle">A preview of the long-term progression and coaching dashboard.</p>
+            <p className="page-subtitle">
+              A preview of the long-term progression and coaching dashboard.
+            </p>
           </div>
 
           <div className="profile-actions">
@@ -104,8 +106,8 @@ export default function ProfilePage() {
               <Target size={24} aria-hidden="true" />
             </div>
             <p>
-              You are making fewer unnecessary guesses, but missed board patterns are now showing up as
-              the biggest repeatable source of mistakes in recent games.
+              You are making fewer unnecessary guesses, but missed board patterns are now
+              showing up as the biggest repeatable source of mistakes in recent games.
             </p>
             <div className="focus-progress">
               <div>
@@ -116,7 +118,11 @@ export default function ProfilePage() {
                 <span style={{ width: "38%" }} />
               </div>
             </div>
-            <button className="panel-action" type="button" title="Coaching page will be added later">
+            <button
+              className="panel-action"
+              type="button"
+              title="Coaching page will be added later"
+            >
               Ask Coach About This
               <ArrowRight size={16} aria-hidden="true" />
             </button>
@@ -132,10 +138,12 @@ export default function ProfilePage() {
             </div>
             <div className="improvement-number">-31%</div>
             <p>
-              Unnecessary guesses are appearing less often across your latest games compared with your
-              earlier history.
+              Unnecessary guesses are appearing less often across your latest games
+              compared with your earlier history.
             </p>
-            <span className="comparison-note">Last 10 games compared with previous 10</span>
+            <span className="comparison-note">
+              Last 10 games compared with previous 10
+            </span>
           </section>
 
           <section className="profile-panel breakdown-card">
@@ -174,7 +182,10 @@ export default function ProfilePage() {
             <div className="recent-games">
               {recentGames.map((game, index) => (
                 <div className="recent-game" key={`${game.result}-${index}`}>
-                  <span className={`result-dot ${game.result.toLowerCase()}`} aria-hidden="true" />
+                  <span
+                    className={`result-dot ${game.result.toLowerCase()}`}
+                    aria-hidden="true"
+                  />
                   <div className="recent-result">
                     <strong>{game.result}</strong>
                     <span>Ranked · 16 × 16</span>
@@ -187,8 +198,14 @@ export default function ProfilePage() {
                     <Crosshair size={14} aria-hidden="true" />
                     {game.moves} moves
                   </div>
-                  <div className="recent-detail recent-mistakes">{game.mistakes} mistakes</div>
-                  <button type="button" className="recent-open" title="Game reports will be added later">
+                  <div className="recent-detail recent-mistakes">
+                    {game.mistakes} mistakes
+                  </div>
+                  <button
+                    type="button"
+                    className="recent-open"
+                    title="Game reports will be added later"
+                  >
                     <ChevronRight size={18} aria-hidden="true" />
                     <span className="sr-only">Open game preview</span>
                   </button>
@@ -199,8 +216,9 @@ export default function ProfilePage() {
         </div>
 
         <p className="profile-disclaimer">
-          This profile uses placeholder data for the visual prototype. Real stats will come from saved
-          gameplay once the database and Supabase authentication are connected.
+          This profile uses placeholder data for the visual prototype. Real stats will
+          come from saved gameplay once the database and Supabase authentication are
+          connected.
         </p>
       </main>
     </>

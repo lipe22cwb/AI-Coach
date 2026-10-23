@@ -34,8 +34,7 @@ const robotoCondensed = localFont({
 // Next.js uses this for the browser tab, page description and favicon.
 export const metadata: Metadata = {
   title: "AI-Coach | Minesweeper",
-  description:
-    "Practise Minesweeper with post-game feedback on patterns and decisions.",
+  description: "Practise Minesweeper with post-game feedback on patterns and decisions.",
   icons: {
     icon: "/favicon.svg",
   },
@@ -47,10 +46,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${roboto.variable} ${robotoCondensed.variable}`}
-    >
+    <html lang="en" className={`${roboto.variable} ${robotoCondensed.variable}`}>
       <body>{children}</body>
     </html>
   );

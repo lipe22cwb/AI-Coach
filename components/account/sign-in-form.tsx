@@ -71,7 +71,7 @@ export function SignInForm() {
         // If email confirmation is enabled, Supabase will require
         // the user to confirm their email before signing in.
         setMessage(
-          "Account created! Check your email to confirm your account, then come back and sign in."
+          "Account created! Check your email to confirm your account, then come back and sign in.",
         );
 
         setMode("sign-in");
@@ -181,9 +181,7 @@ export function SignInForm() {
                 name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
-                autoComplete={
-                  mode === "sign-in" ? "current-password" : "new-password"
-                }
+                autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
                 minLength={6}
                 required
               />
@@ -191,27 +189,15 @@ export function SignInForm() {
               <button
                 className="password-toggle"
                 type="button"
-                onClick={() =>
-                  setShowPassword((current) => !current)
-                }
-                aria-label={
-                  showPassword ? "Hide password" : "Show password"
-                }
+                onClick={() => setShowPassword((current) => !current)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? (
-                  <EyeOff size={18} />
-                ) : (
-                  <Eye size={18} />
-                )}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </span>
           </label>
 
-          <button
-            className="auth-submit"
-            type="submit"
-            disabled={loading}
-          >
+          <button className="auth-submit" type="submit" disabled={loading}>
             {loading
               ? mode === "sign-in"
                 ? "Signing In..."
@@ -223,10 +209,7 @@ export function SignInForm() {
         </form>
 
         {message && (
-          <p
-            className={`auth-message${isError ? " error" : ""}`}
-            role="status"
-          >
+          <p className={`auth-message${isError ? " error" : ""}`} role="status">
             {message}
           </p>
         )}

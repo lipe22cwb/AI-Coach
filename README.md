@@ -1,4 +1,3 @@
-
 # AI-Coach
 
 AI-Coach is an AI-powered Minesweeper coaching platform designed to help players improve their skills through gameplay analysis, personalized feedback, and competitive play.
@@ -26,6 +25,7 @@ Open http://localhost:3000 in your browser.
 ## Current Features
 
 ### Minesweeper Gameplay
+
 - Beginner, Intermediate, and Expert difficulties
 - First-click protection
 - Revealing and flagging cells
@@ -35,6 +35,7 @@ Open http://localhost:3000 in your browser.
 - Win and loss detection
 
 ### User Accounts
+
 - Sign-in and account creation pages
 - Supabase email/password authentication
 - Sign-out functionality
@@ -43,6 +44,7 @@ Open http://localhost:3000 in your browser.
 Authentication requires a configured Supabase project.
 
 ### AI Coaching
+
 - Dedicated Coaching page
 - Game analysis using a rule-based engine
 - Optional AI-generated explanations through an external provider
@@ -52,6 +54,7 @@ Authentication requires a configured Supabase project.
 The Coaching page currently uses sample sessions rather than completed games from the live board.
 
 ### Settings
+
 - Coaching style preferences
 - Explanation detail and experience settings
 - Personal improvement goals
@@ -60,6 +63,7 @@ The Coaching page currently uses sample sessions rather than completed games fro
 Settings are not yet fully connected to user accounts or coaching responses.
 
 ### Ranked System
+
 - Prototype Ranked results API at `/api/ranked-results`
 - Recording and retrieving submitted winning results
 - Results organized by board configuration
@@ -97,6 +101,7 @@ Never commit API keys or secret credentials.
 The project is still under active development.
 
 Major remaining tasks include:
+
 - Recording and saving complete gameplay sessions
 - Connecting live gameplay to AI coaching
 - Persistent database storage

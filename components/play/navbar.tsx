@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -6,12 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 
-import {
-  Gamepad2,
-  MessageSquare,
-  Settings2,
-  UserRound,
-} from "lucide-react";
+import { Gamepad2, MessageSquare, Settings2, UserRound } from "lucide-react";
 
 import { MineLogo } from "./mine-logo";
 import { createClient } from "@/lib/supabase/client";
@@ -103,18 +97,12 @@ export function Navbar() {
   }
 
   const username =
-    user?.user_metadata?.username ||
-    user?.email?.split("@")[0] ||
-    "Profile";
+    user?.user_metadata?.username || user?.email?.split("@")[0] || "Profile";
 
   return (
     <header className="site-header">
       <div className="nav-shell">
-        <Link
-          className="brand"
-          href="/"
-          aria-label="AI-Coach home"
-        >
+        <Link className="brand" href="/" aria-label="AI-Coach home">
           <MineLogo className="brand-mine" />
           <span>AI-Coach</span>
         </Link>
@@ -131,11 +119,7 @@ export function Navbar() {
                   className={`nav-item${active ? " active" : ""}`}
                   aria-current={active ? "page" : undefined}
                 >
-                  <Icon
-                    size={18}
-                    strokeWidth={1.7}
-                    aria-hidden="true"
-                  />
+                  <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
                   <span>{label}</span>
                 </Link>
               );
@@ -149,11 +133,7 @@ export function Navbar() {
                 aria-disabled="true"
                 title={`${label} page coming later`}
               >
-                <Icon
-                  size={18}
-                  strokeWidth={1.7}
-                  aria-hidden="true"
-                />
+                <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
                 <span>{label}</span>
               </button>
             );
@@ -167,20 +147,14 @@ export function Navbar() {
                 {username}
               </Link>
 
-              <button
-                type="button"
-                className="sign-out-button"
-                onClick={handleSignOut}
-              >
+              <button type="button" className="sign-out-button" onClick={handleSignOut}>
                 Sign Out
               </button>
             </>
           ) : !loadingUser ? (
             <Link
               href="/sign-in"
-              className={`sign-in${
-                pathname === "/sign-in" ? " active" : ""
-              }`}
+              className={`sign-in${pathname === "/sign-in" ? " active" : ""}`}
             >
               Sign In
             </Link>

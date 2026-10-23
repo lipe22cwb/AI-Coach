@@ -8,11 +8,11 @@ needed.
 
 ## Interface inventory and current status
 
-| Interface | Direction | Current status |
-| --- | --- | --- |
-| Settings preferences repository | Settings UI ↔ persistence adapter | Local adapter works; account adapter awaits integration |
-| AI Coach API | Coaching client → `/api/coach` → AI provider / rules fallback | Present on `origin/Luiz-Branch` (`71c2d2f`); not merged into this branch; coaching personality is not configurable yet |
-| Ranked results API | Game client → this app's API → prototype file store | Implemented as a local prototype |
+| Interface                       | Direction                                                     | Current status                                                                                                         |
+| ------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Settings preferences repository | Settings UI ↔ persistence adapter                            | Local adapter works; account adapter awaits integration                                                                |
+| AI Coach API                    | Coaching client → `/api/coach` → AI provider / rules fallback | Present on `origin/Luiz-Branch` (`71c2d2f`); not merged into this branch; coaching personality is not configurable yet |
+| Ranked results API              | Game client → this app's API → prototype file store           | Implemented as a local prototype                                                                                       |
 
 ## Settings preferences repository
 
@@ -77,10 +77,10 @@ runtime validation and defaults.
 
 ### Operation behavior
 
-| Operation | Input | Success result | Failure behavior |
-| --- | --- | --- | --- |
-| `load()` | None | A complete `SettingsPreferences` object; missing or invalid fields should resolve to defaults | Reject the promise; the UI displays a load error |
-| `save(preferences)` | A complete `SettingsPreferences` object | Resolves with `void` after persistence succeeds | Reject the promise; the UI displays a save error and does not mark the values saved |
+| Operation           | Input                                   | Success result                                                                                | Failure behavior                                                                    |
+| ------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `load()`            | None                                    | A complete `SettingsPreferences` object; missing or invalid fields should resolve to defaults | Reject the promise; the UI displays a load error                                    |
+| `save(preferences)` | A complete `SettingsPreferences` object | Resolves with `void` after persistence succeeds                                               | Reject the promise; the UI displays a save error and does not mark the values saved |
 
 The adapter must scope account-backed data to the current authenticated user.
 The UI must not provide the user ID. The adapter should validate/normalize

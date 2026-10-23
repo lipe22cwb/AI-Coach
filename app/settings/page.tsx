@@ -16,9 +16,7 @@ export default function SettingsPage() {
             <h1>
               Settings<span className="title-period">.</span>
             </h1>
-            <p className="page-subtitle">
-              Choose how your coach communicates with you.
-            </p>
+            <p className="page-subtitle">Choose how your coach communicates with you.</p>
           </div>
         </div>
 
