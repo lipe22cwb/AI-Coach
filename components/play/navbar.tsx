@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+
 import {
   Gamepad2,
   MessageSquare,
@@ -10,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { MineLogo } from "./mine-logo";
+import { createClient } from "@/lib/supabase/client";
 
 const navigationItems = [
   {
@@ -36,12 +40,56 @@ const navigationItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function loadUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setUser(user);
+      setLoadingUser(false);
+    }
+
+    loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoadingUser(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+
+    await supabase.auth.signOut();
+
+    setUser(null);
+
+    router.push("/");
+    router.refresh();
+  }
+
+  const username =
+    user?.user_metadata?.username ||
+    user?.email?.split("@")[0] ||
+    "Profile";
 
   return (
     <header className="site-header">
       <div className="nav-shell">
-
-        {/* Logo / Home */}
         <Link
           className="brand"
           href="/"
@@ -51,12 +99,10 @@ export function Navbar() {
           <span>AI-Coach</span>
         </Link>
 
-        {/* Main navigation */}
         <nav className="main-nav" aria-label="Main navigation">
           {navigationItems.map(({ label, icon: Icon, route }) => {
             const active = route ? pathname === route : false;
 
-            // Pages that currently exist
             if (route) {
               return (
                 <Link
@@ -76,7 +122,6 @@ export function Navbar() {
               );
             }
 
-            // Coaching and Settings are visual placeholders for now
             return (
               <button
                 key={label}
@@ -96,19 +141,32 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* Sign In */}
-        <Link
-          href="/sign-in"
-          className={`sign-in${
-            pathname === "/sign-in" ? " active" : ""
-          }`}
-          aria-current={
-            pathname === "/sign-in" ? "page" : undefined
-          }
-        >
-          Sign In
-        </Link>
+        <div className="nav-account">
+          {!loadingUser && user ? (
+            <>
+              <Link href="/profile" className="sign-in">
+                {username}
+              </Link>
 
+              <button
+                type="button"
+                className="sign-out-button"
+                onClick={handleSignOut}
+              >
+                Sign Out
+              </button>
+            </>
+          ) : !loadingUser ? (
+            <Link
+              href="/sign-in"
+              className={`sign-in${
+                pathname === "/sign-in" ? " active" : ""
+              }`}
+            >
+              Sign In
+            </Link>
+          ) : null}
+        </div>
       </div>
     </header>
   );
