@@ -70,6 +70,28 @@
 
 /* MOBILE */
 /* Put the navigation on a second row and give the game most of the phone width. */
+@media (max-width: 760px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .settings-sidebar {
+    position: static;
+    padding: 10px;
+  }
+  .settings-sidebar-nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+  .settings-nav-item {
+    width: auto;
+    min-width: 178px;
+    flex: 0 0 auto;
+    padding: 8px;
+  }
+}
+
 @media (max-width: 600px) {
   .nav-shell,
   .page-shell {
@@ -103,6 +125,16 @@
   }
   .page-shell {
     padding-top: 27px;
+  }
+  .nav-item,
+  .sign-in,
+  .sign-out-button,
+  .settings-button,
+  .settings-nav-item,
+  .mode-button,
+  .profile-play-link,
+  .password-toggle {
+    min-height: 44px;
   }
   .page-heading {
     margin-bottom: 22px;
@@ -167,9 +199,15 @@
     width: 13px;
   }
   .board-area {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
     padding: 0 9px 17px;
   }
   .minesweeper-board {
+    width: max(100%, var(--board-min-width));
+    max-width: none;
+    grid-template-columns: repeat(var(--board-columns), minmax(32px, 1fr));
     padding: 3px;
     gap: 2px;
   }
@@ -180,6 +218,13 @@
   .board-footer {
     padding: 0 14px 17px;
     font-size: 11px;
+  }
+  .board-scroll-hint {
+    display: block;
+    margin: 0 0 8px;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.5;
   }
   .coach-sidebar {
     grid-template-columns: minmax(0, 1fr);
@@ -261,12 +306,16 @@
 /* REDUCED MOTION */
 /* Respect the device setting for people who prefer less animation. */
 @media (prefers-reduced-motion: reduce) {
-  button,
-  a,
-  .focus-chevron {
-    transition: none;
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
+
   .coach-spin {
-    animation: none;
+    animation: none !important;
   }
 }

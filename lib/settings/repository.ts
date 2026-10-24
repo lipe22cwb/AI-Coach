@@ -7,8 +7,10 @@ import type {
   SettingsPreferences,
   SettingsRepository,
 } from "./types";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const STORAGE_KEY = "ai-coach.settings.preferences.v1";
+const VALID_GOALS = ["patterns", "logic", "guessing", "flagging", "efficiency"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -45,11 +47,14 @@ export function normalizePreferences(value: unknown): SettingsPreferences {
       DEFAULT_PREFERENCES.experienceLevel,
     ),
     selectedGoals: Array.isArray(value.selectedGoals)
-      ? value.selectedGoals.filter((goal): goal is string => typeof goal === "string")
+      ? [...new Set(value.selectedGoals)].filter(
+          (goal): goal is string =>
+            typeof goal === "string" && VALID_GOALS.includes(goal),
+        )
       : [...DEFAULT_PREFERENCES.selectedGoals],
     customGoal:
       typeof value.customGoal === "string"
-        ? value.customGoal
+        ? value.customGoal.slice(0, 160)
         : DEFAULT_PREFERENCES.customGoal,
     competitiveness: oneOf<Competitiveness>(
       value.competitiveness,
@@ -89,6 +94,110 @@ export function createLocalSettingsRepository(): SettingsRepository {
         STORAGE_KEY,
         JSON.stringify(normalizePreferences(preferences)),
       );
+    },
+  };
+}
+
+export function clearLocalSettingsPreferences() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // A failed cleanup must not invalidate preferences already migrated to the account.
+  }
+}
+
+type SupabaseClientProvider = typeof getSupabaseBrowserClient;
+
+async function getCurrentUserId(getClient: SupabaseClientProvider) {
+  const client = getClient();
+  if (!client) return null;
+
+  const { data, error } = await client.auth.getSession();
+  if (error) throw error;
+  return data.session?.user.id ?? null;
+}
+
+async function readAccountPreferences(
+  userId: string,
+  getClient: SupabaseClientProvider,
+) {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured.");
+
+  const { data, error } = await client
+    .from("user_preferences")
+    .select(
+      "coaching_style, explanation_detail, experience_level, selected_goals, custom_goal, competitiveness",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return normalizePreferences({
+    coachingStyle: data.coaching_style,
+    explanationDetail: data.explanation_detail,
+    experienceLevel: data.experience_level,
+    selectedGoals: data.selected_goals,
+    customGoal: data.custom_goal,
+    competitiveness: data.competitiveness,
+  });
+}
+
+async function writeAccountPreferences(
+  userId: string,
+  preferences: SettingsPreferences,
+  getClient: SupabaseClientProvider,
+) {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured.");
+
+  const normalized = normalizePreferences(preferences);
+  const { error } = await client.from("user_preferences").upsert(
+    {
+      user_id: userId,
+      coaching_style: normalized.coachingStyle,
+      explanation_detail: normalized.explanationDetail,
+      experience_level: normalized.experienceLevel,
+      selected_goals: normalized.selectedGoals,
+      custom_goal: normalized.customGoal,
+      competitiveness: normalized.competitiveness,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+
+  if (error) throw error;
+}
+
+/** Uses account storage when signed in and migrates existing local preferences once. */
+export function createSettingsRepository(
+  getClient: SupabaseClientProvider = getSupabaseBrowserClient,
+): SettingsRepository {
+  const localRepository = createLocalSettingsRepository();
+
+  return {
+    async load() {
+      const userId = await getCurrentUserId(getClient);
+      if (!userId) return localRepository.load();
+
+      const accountPreferences = await readAccountPreferences(userId, getClient);
+      if (accountPreferences) {
+        clearLocalSettingsPreferences();
+        return accountPreferences;
+      }
+
+      const localPreferences = await localRepository.load();
+      await writeAccountPreferences(userId, localPreferences, getClient);
+      clearLocalSettingsPreferences();
+      return localPreferences;
+    },
+    async save(preferences) {
+      const userId = await getCurrentUserId(getClient);
+      if (!userId) return localRepository.save(preferences);
+      await writeAccountPreferences(userId, preferences, getClient);
     },
   };
 }
