@@ -9,15 +9,13 @@ import {
   resetSectionPreferences,
   sectionHasChanges,
 } from "./preferences";
-import { createLocalSettingsRepository } from "./repository";
+import { createSettingsRepository } from "./repository";
 import type { SettingsPreferences, SettingsRepository, SettingsSection } from "./types";
 
 type PreferenceKey = keyof SettingsPreferences;
 
 export function useSettingsPreferences(repository?: SettingsRepository) {
-  const [settingsRepository] = useState(
-    () => repository ?? createLocalSettingsRepository(),
-  );
+  const [settingsRepository] = useState(() => repository ?? createSettingsRepository());
   const [preferences, setPreferences] = useState(() =>
     copyPreferences(DEFAULT_PREFERENCES),
   );
@@ -96,7 +94,7 @@ export function useSettingsPreferences(repository?: SettingsRepository) {
       setSavedPreferences(nextPreferences);
       setSectionMessages((current) => ({
         ...current,
-        [section]: "This section was saved on this device.",
+        [section]: "This section was saved.",
       }));
       setGlobalMessage("");
     } catch {
@@ -120,7 +118,7 @@ export function useSettingsPreferences(repository?: SettingsRepository) {
         "explanation-detail": "",
         "player-profile": "",
       });
-      setGlobalMessage("All settings were saved on this device.");
+      setGlobalMessage("All settings were saved.");
     } catch {
       setGlobalMessage("Could not save settings. Please try again.");
     } finally {
@@ -137,8 +135,7 @@ export function useSettingsPreferences(repository?: SettingsRepository) {
     setPreferences((current) => resetSectionPreferences(current, section));
     setSectionMessages((current) => ({
       ...current,
-      [section]:
-        "Defaults restored. Save this section to keep the changes on this device.",
+      [section]: "Defaults restored. Save this section to keep the changes.",
     }));
     setGlobalMessage("");
   }
@@ -150,7 +147,7 @@ export function useSettingsPreferences(repository?: SettingsRepository) {
       "explanation-detail": "",
       "player-profile": "",
     });
-    setGlobalMessage("Defaults restored. Save all settings to keep them on this device.");
+    setGlobalMessage("Defaults restored. Save all settings to keep them.");
   }
 
   return {

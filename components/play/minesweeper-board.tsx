@@ -1,8 +1,8 @@
 "use client";
 
 import { Bomb, Flag, FlagTriangleRight, Grid2X2, MousePointer2 } from "lucide-react";
-import type { CSSProperties, MouseEvent } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { DifficultySettings } from "@/lib/game-settings";
 import type { GameCell } from "./board-fixture";
@@ -160,6 +160,8 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
   const [firstClick, setFirstClick] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [inputMode, setInputMode] = useState<InputMode>("reveal");
+  const [focusedCell, setFocusedCell] = useState({ row: 0, col: 0 });
+  const cellRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const flaggedCount = useMemo(
     () => board.flat().filter((cell) => cell.flagged).length,
@@ -304,9 +306,31 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
     }
   };
 
+  const handleCellKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    row: number,
+    col: number,
+  ) => {
+    const movement: Record<string, Position> = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+    };
+    const offset = movement[event.key];
+    if (!offset) return;
+
+    event.preventDefault();
+    const nextRow = Math.max(0, Math.min(rows - 1, row + offset[0]));
+    const nextCol = Math.max(0, Math.min(columns - 1, col + offset[1]));
+    setFocusedCell({ row: nextRow, col: nextCol });
+    cellRefs.current[nextRow * columns + nextCol]?.focus();
+  };
+
   const boardStyle = {
     "--board-columns": columns,
     "--board-rows": rows,
+    "--board-min-width": `${columns * 32 + (columns - 1) * 2 + 6}px`,
   } as CSSProperties;
 
   return (
@@ -351,11 +375,21 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       )}
 
       <div className="board-area">
+        <p className="sr-only" id="board-keyboard-instructions">
+          Use the arrow keys to move between cells. Press Enter or Space to reveal or flag
+          a cell according to the selected action mode.
+        </p>
+        {columns > 9 && (
+          <p className="board-scroll-hint">
+            Swipe or scroll the board to see all columns.
+          </p>
+        )}
         <div
           className="minesweeper-board"
           style={boardStyle}
           role="grid"
           aria-label={`${settings.label}: ${rows} by ${columns}, ${mines} mines`}
+          aria-describedby="board-keyboard-instructions"
           onContextMenu={(event) => event.preventDefault()}
         >
           {board.map((line, row) =>
@@ -376,9 +410,15 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
               return (
                 <button
                   key={`${row}-${col}`}
+                  ref={(element) => {
+                    cellRefs.current[row * columns + col] = element;
+                  }}
                   type="button"
                   className={classes}
                   role="gridcell"
+                  aria-rowindex={row + 1}
+                  aria-colindex={col + 1}
+                  tabIndex={row === focusedCell.row && col === focusedCell.col ? 0 : -1}
                   aria-label={
                     cell.flagged
                       ? `Row ${row + 1}, column ${col + 1}, flagged`
@@ -387,6 +427,8 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
                         : `Row ${row + 1}, column ${col + 1}, covered`
                   }
                   onMouseDown={(event) => handleMouseDown(event, row, col)}
+                  onFocus={() => setFocusedCell({ row, col })}
+                  onKeyDown={(event) => handleCellKeyDown(event, row, col)}
                   onClick={() => {
                     if (cell.revealed) return;
                     if (inputMode === "flag") toggleFlag(row, col);

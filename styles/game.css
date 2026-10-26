@@ -55,6 +55,7 @@
 }
 
 .board-area {
+  min-width: 0;
   padding: 12px 26px 24px;
 }
 /* The board supplies --board-columns from lib/game-settings.ts.
@@ -88,6 +89,13 @@
   font-weight: 750;
   font-variant-numeric: tabular-nums;
   user-select: none;
+  touch-action: manipulation;
+}
+.cell:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid #fff;
+  outline-offset: 1px;
 }
 /* A small inset shadow makes covered squares look raised without extra borders. */
 .cell.unrevealed {
@@ -149,10 +157,14 @@
   font-size: 12px;
 }
 .board-dimensions,
-.board-instructions {
+.board-instructions,
+.board-scroll-hint {
   display: inline-flex;
   align-items: center;
   gap: 9px;
+}
+.board-scroll-hint {
+  display: none;
 }
 .footer-divider {
   width: 1px;

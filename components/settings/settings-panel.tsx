@@ -168,7 +168,7 @@ export function SettingsPanel() {
 
   function confirmResetAll() {
     const confirmed = window.confirm(
-      "Reset all settings to their default values? You will need to save all settings to keep them on this device.",
+      "Reset all settings to their default values? You will need to save all settings to keep them.",
     );
     if (!confirmed) return;
     resetAll();
@@ -177,7 +177,7 @@ export function SettingsPanel() {
   function confirmResetSection(section: SettingsSection) {
     const sectionTitle = settingsSections.find((item) => item.id === section)?.title;
     const confirmed = window.confirm(
-      `Reset ${sectionTitle} to its default values? You will need to save this section to keep the changes on this device.`,
+      `Reset ${sectionTitle} to its default values? You will need to save this section to keep the changes.`,
     );
     if (confirmed) resetSection(section);
   }

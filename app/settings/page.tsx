@@ -9,7 +9,7 @@ export default function SettingsPage() {
       </a>
       <Navbar />
 
-      <main className="page-shell settings-page" id="main-content">
+      <main className="page-shell settings-page" id="main-content" tabIndex={-1}>
         <div className="page-heading settings-heading">
           <div>
             <p className="eyebrow">MAKE COACHING YOURS</p>
