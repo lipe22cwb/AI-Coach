@@ -1,83 +1,67 @@
-import {
-  listRankedResults,
-  parseRankedResultInput,
-  saveRankedResult,
-} from "@/lib/ranked-results";
+import { createClient } from "@/lib/supabase/sever";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const noStore = { "Cache-Control": "no-store" };
+const headers = {
+  "Cache-Control": "no-store",
+};
 
-function parsePositiveInteger(value: string | null) {
-  if (!value || !/^\d+$/.test(value)) {
-    return null;
-  }
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+// Ranked results cannot be trusted until server-side verification is ready.
+export async function GET() {
+  return Response.json(
+    {
+      error: "Ranked leaderboards are temporarily unavailable.",
+    },
+    {
+      status: 503,
+      headers,
+    },
+  );
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const boardSize = parsePositiveInteger(searchParams.get("boardSize"));
-  const mineCount = parsePositiveInteger(searchParams.get("mineCount"));
-
-  if (boardSize === null || boardSize < 2 || boardSize > 50 || mineCount === null) {
+export async function POST() {
+  // Ranked games require authentication.
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  ) {
     return Response.json(
-      { error: "Provide a boardSize from 2 to 50 and a positive mineCount." },
-      { status: 400, headers: noStore },
-    );
-  }
-  if (mineCount >= boardSize ** 2) {
-    return Response.json(
-      { error: "mineCount must be smaller than the board." },
-      { status: 400, headers: noStore },
+      { error: "Ranked authentication is not configured." },
+      { status: 503, headers },
     );
   }
 
   try {
-    const results = await listRankedResults(boardSize, mineCount);
-    return Response.json(
-      {
-        mode: "ranked",
-        boardSize,
-        mineCount,
-        results: results.map((result, index) => ({ rank: index + 1, ...result })),
-      },
-      { headers: noStore },
-    );
-  } catch (error) {
-    console.error("Could not read Ranked results.", error);
-    return Response.json(
-      { error: "Ranked results are temporarily unavailable." },
-      { status: 500, headers: noStore },
-    );
-  }
-}
+    const supabase = await createClient();
 
-export async function POST(request: Request) {
-  let body: unknown;
-  try {
-    body = await request.json();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      return Response.json(
+        { error: "You must sign in to submit Ranked results." },
+        { status: 401, headers },
+      );
+    }
   } catch {
-    return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
-  }
-
-  const parsed = parseRankedResultInput(body);
-  if (!parsed.ok) {
-    return Response.json({ error: parsed.error }, { status: 400 });
-  }
-
-  try {
-    const saved = await saveRankedResult(parsed.value);
-    return Response.json(saved, {
-      status: saved.duplicate ? 200 : 201,
-      headers: noStore,
-    });
-  } catch (error) {
-    console.error("Could not save Ranked result.", error);
     return Response.json(
-      { error: "Ranked result could not be saved." },
-      { status: 500, headers: noStore },
+      { error: "Could not verify your account." },
+      { status: 503, headers },
     );
   }
+
+  // Being signed in does not prove the player actually won.
+  // A future server-controlled game session must verify the result.
+  return Response.json(
+    {
+      error: "Ranked submissions are unavailable until game verification is implemented.",
+    },
+    {
+      status: 503,
+      headers,
+    },
+  );
 }
