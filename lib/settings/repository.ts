@@ -118,10 +118,7 @@ async function getCurrentUserId(getClient: SupabaseClientProvider) {
   return data.session?.user.id ?? null;
 }
 
-async function readAccountPreferences(
-  userId: string,
-  getClient: SupabaseClientProvider,
-) {
+async function readAccountPreferences(userId: string, getClient: SupabaseClientProvider) {
   const client = getClient();
   if (!client) throw new Error("Supabase is not configured.");
 
