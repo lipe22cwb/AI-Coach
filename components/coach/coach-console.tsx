@@ -4,6 +4,7 @@ import { Loader2, Play, Sparkles, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CoachReportView } from "@/components/coach/coach-report-view";
+import { EvidenceCoachPanel } from "@/components/coach/evidence-coach-panel";
 import { VerifiedReplayPanel } from "@/components/coach/verified-replay-panel";
 import { analyzeGameplay, toRuleReport } from "@/lib/coach/analyze";
 import { SAMPLE_LOSS_SESSION, SAMPLE_WIN_SESSION } from "@/lib/coach/sample-session";
@@ -76,6 +77,13 @@ export function CoachConsole() {
   const [error, setError] = useState<string | null>(null);
   const [lastGame, setLastGame] = useState<RecordedGame | null>(null);
   const [selectedReplay, setSelectedReplay] = useState<PracticeSession | null>(null);
+  const [replayFocus, setReplayFocus] = useState<{
+    moveNumber: number;
+    request: number;
+  } | null>(null);
+  const chooseReplayMove = useCallback((moveNumber: number) => {
+    setReplayFocus((previous) => ({ moveNumber, request: (previous?.request ?? 0) + 1 }));
+  }, []);
   const [practiceMessage, setPracticeMessage] = useState("");
   const autoAnalysisStarted = useRef(false);
 
@@ -141,22 +149,19 @@ export function CoachConsole() {
       autoAnalysisStarted.current = true;
       if (saved.game) {
         setSelectedReplay(saved.game.practice);
-        if (saved.game.session) {
-          void analyze("practice", saved.game.session);
-        }
       } else {
         setError(saved.message);
       }
     }
-  }, [analyze]);
+  }, []);
 
   let providerLine: string;
   if (statusUnavailable) {
-    providerLine = "Rule coach running in the browser";
+    providerLine = "Verified coaching works locally · AI status unavailable";
   } else if (status?.configured && status.provider) {
     providerLine = `AI provider ready · ${status.provider.id} · ${status.provider.model}`;
   } else if (status) {
-    providerLine = "Rule coach only — add an API key to enable AI wording";
+    providerLine = "Verified rule coaching ready · AI focus selection optional";
   } else {
     providerLine = "Checking the coaching API…";
   }
@@ -167,9 +172,9 @@ export function CoachConsole() {
         <span className="subtle-label">Gameplay analyser</span>
         <h2>Send a game, get a report.</h2>
         <p className="coach-controls-copy">
-          Analyze your latest finished Practice game, or try a sample report. The rule
-          engine checks your moves; an optional AI provider rewrites its feedback in
-          friendlier words.
+          Review real Practice decisions with board evidence and a short teaching report.
+          Optionally ask AI to prioritize one verified focus area. The older draft reports
+          remain available for comparison.
         </p>
 
         <span className="coach-provider" data-ready={status?.configured ? "yes" : "no"}>
@@ -188,12 +193,9 @@ export function CoachConsole() {
               className="coach-btn"
               onClick={() => {
                 setSelectedReplay(lastGame.practice);
-                if (lastGame.session) {
-                  void analyze("practice", lastGame.session);
-                } else {
-                  setResult(null);
-                  setError(null);
-                }
+                setReplayFocus(null);
+                setResult(null);
+                setError(null);
               }}
               disabled={loadingKey !== null}
             >
@@ -212,6 +214,7 @@ export function CoachConsole() {
               className="coach-btn"
               onClick={() => {
                 setSelectedReplay(null);
+                setReplayFocus(null);
                 void analyze(key, session);
               }}
               disabled={loadingKey !== null}
@@ -234,8 +237,9 @@ export function CoachConsole() {
             Up to five recent Practice games are stored temporarily in this browser tab.
           </li>
           <li>
-            Verified replay runs locally. The older experimental narrative for square
-            games may contact the coaching API and its configured AI provider.
+            The verified teaching report runs locally. Optional AI focus selection sends
+            verified findings to the provider, never the hidden mine layout. The older
+            experimental report is separate and unverified.
           </li>
         </ul>
 
@@ -250,15 +254,32 @@ export function CoachConsole() {
       <section aria-label="Coaching report" aria-live="polite">
         {selectedReplay ? (
           <>
-            <VerifiedReplayPanel game={selectedReplay} />
-            {lastGame?.session && (result || loadingKey === "practice") ? (
+            <EvidenceCoachPanel game={selectedReplay} onReviewMove={chooseReplayMove} />
+            <VerifiedReplayPanel
+              game={selectedReplay}
+              focusMoveNumber={replayFocus?.moveNumber}
+              focusRequestId={replayFocus?.request}
+            />
+            {lastGame?.session ? (
               <details className="verified-experimental">
                 <summary>Earlier AI coach draft (experimental)</summary>
                 <p>
-                  This older report uses simpler analysis rules and includes a prototype
-                  grade. Treat its claims and scores as unverified; use the move replay
-                  above for evidence-backed classifications.
+                  This older report uses simpler analysis and a prototype grade. Its
+                  scores and claims are not evidence-verified. It runs only if you request
+                  it, and may call your configured AI provider.
                 </p>
+                <button
+                  type="button"
+                  className="coach-btn"
+                  disabled={loadingKey !== null}
+                  onClick={() => {
+                    if (lastGame?.session) void analyze("practice", lastGame.session);
+                  }}
+                >
+                  {loadingKey === "practice"
+                    ? "Preparing draft…"
+                    : "Run experimental report"}
+                </button>
                 {result ? (
                   <div className="coach-report-panel">
                     <CoachReportView
@@ -266,26 +287,30 @@ export function CoachConsole() {
                       fallbackReason={result.fallbackReason}
                     />
                   </div>
-                ) : (
-                  <p>Preparing experimental report…</p>
-                )}
+                ) : null}
               </details>
             ) : null}
           </>
         ) : result ? (
-          <div className="coach-report-panel">
-            <CoachReportView
-              report={result.report}
-              fallbackReason={result.fallbackReason}
-            />
-          </div>
+          <>
+            <p className="verified-note">
+              Demo report using the previous experimental scoring engine; it is not a
+              verified coaching report.
+            </p>
+            <div className="coach-report-panel">
+              <CoachReportView
+                report={result.report}
+                fallbackReason={result.fallbackReason}
+              />
+            </div>
+          </>
         ) : (
           <div className="coach-placeholder">
             <Sparkles size={22} aria-hidden="true" />
             <p>
               {loadingKey
-                ? "Analyzing your game…"
-                : "Choose a game on the left to see the coach's feedback."}
+                ? "Analyzing a sample game…"
+                : "Choose a recorded Practice game to see verified coaching."}
             </p>
           </div>
         )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   CheckCircle2,
@@ -129,7 +129,15 @@ function BoardView({
  * Gameplay evidence comes from visible numbers, not hindsight from the mine layout.
  * The layout is only used to replay how a square actually opened after the move.
  */
-export function VerifiedReplayPanel({ game }: { game: PracticeSession }) {
+export function VerifiedReplayPanel({
+  game,
+  focusMoveNumber,
+  focusRequestId,
+}: {
+  game: PracticeSession;
+  focusMoveNumber?: number | null;
+  focusRequestId?: number;
+}) {
   const replay = useMemo(() => {
     try {
       return { value: replayRecordedGame(game), error: "" };
@@ -153,6 +161,9 @@ export function VerifiedReplayPanel({ game }: { game: PracticeSession }) {
     return [...mistakes, ...good].slice(0, 5);
   }, [frames]);
   const [selectedMove, setSelectedMove] = useState<number | null>(null);
+  useEffect(() => {
+    if (focusMoveNumber != null) setSelectedMove(focusMoveNumber - 1);
+  }, [focusMoveNumber, focusRequestId]);
   const selectedIndex =
     selectedMove !== null && selectedMove < frames.length
       ? selectedMove
