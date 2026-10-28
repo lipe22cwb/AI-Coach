@@ -12,7 +12,8 @@ export type RankedResultInput = {
 };
 export type RankedResult = RankedResultInput & { id: string; submittedAt: string };
 
-const blocked = "Legacy Ranked result submissions are disabled. Use server-verified matches.";
+const blocked =
+  "Legacy Ranked result submissions are disabled. Use server-verified matches.";
 
 export function parseRankedResultInput(
   _value: unknown,
@@ -30,9 +31,7 @@ export async function listRankedResults(
   throw new Error(blocked);
 }
 
-export async function saveRankedResult(
-  _input: RankedResultInput,
-): Promise<never> {
+export async function saveRankedResult(_input: RankedResultInput): Promise<never> {
   void _input;
   throw new Error(blocked);
 }
