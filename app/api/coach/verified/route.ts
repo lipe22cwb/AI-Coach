@@ -1,81 +1,50 @@
-import { buildEvidenceReport, validateFocusSelection } from "@/lib/coach/evidence-report";
+import { validateFocusSelection } from "@/lib/coach/evidence-report";
+import { prepareVerifiedFocusInput } from "@/lib/coach/verified-focus-input";
 import { getConfiguredProvider, requestNarrative } from "@/lib/coach/providers";
-import type { PracticeSession } from "@/lib/practice/history";
 
-// AI may choose a focus and presentation style. It is never allowed to author
-// findings, classifications, mine positions, or official game statistics.
-// The browser renders only the deterministic report's fixed evidence text.
+// The AI only selects an approved focus and style. The browser displays the
+// verified, deterministic explanations, never model-authored gameplay facts.
+// This endpoint accepts checkpoint-stamped finished Practice games only.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function validGame(value: unknown): value is PracticeSession {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const game = value as Partial<PracticeSession>;
-  const integer = (num: unknown): num is number =>
-    typeof num === "number" && Number.isSafeInteger(num) && num >= 0;
-  if (
-    game.game !== "minesweeper" ||
-    !integer(game.rows) ||
-    !integer(game.columns) ||
-    game.rows < 2 ||
-    game.columns < 2 ||
-    game.rows * game.columns > 600 ||
-    !integer(game.mineCount) ||
-    game.mineCount >= game.rows * game.columns ||
-    (game.outcome !== "win" && game.outcome !== "loss") ||
-    !integer(game.durationSeconds) ||
-    typeof game.difficulty !== "string" ||
-    game.difficulty.length > 40 ||
-    !Array.isArray(game.mines) ||
-    game.mines.length !== game.mineCount ||
-    !game.mines.every((index) => integer(index) && index < game.rows! * game.columns!) ||
-    new Set(game.mines).size !== game.mineCount ||
-    !Array.isArray(game.moves) ||
-    game.moves.length === 0 ||
-    game.moves.length > 1500
-  )
-    return false;
-  return game.moves.every(
-    (move) =>
-      move &&
-      integer(move.row) &&
-      move.row < game.rows! &&
-      integer(move.col) &&
-      move.col < game.columns! &&
-      ["reveal", "flag", "unflag", "chord"].includes(move.action) &&
-      (move.atMs === undefined || integer(move.atMs)),
-  );
+const MAX_RECORDING_LENGTH = 200_000;
+const responseHeaders = { "Cache-Control": "no-store" };
+
+function json(body: unknown, status = 200): Response {
+  return Response.json(body, { status, headers: responseHeaders });
 }
 
 export async function POST(request: Request): Promise<Response> {
-  let data: unknown;
-  try {
-    const raw = await request.text();
-    if (raw.length > 200_000)
-      return Response.json({ error: "Recording is too large." }, { status: 413 });
-    data = JSON.parse(raw);
-  } catch {
-    return Response.json(
-      { error: "Send valid JSON for a finished Practice game." },
-      { status: 400 },
-    );
-  }
-  if (!validGame(data)) {
-    return Response.json(
-      { error: "The Practice recording is missing or invalid." },
-      { status: 400 },
-    );
+  // A cross-site browser request must not trigger a potentially billable model.
+  const origin = request.headers.get("origin");
+  if (origin && origin !== new URL(request.url).origin) {
+    return json({ error: "Invalid request origin." }, 403);
   }
 
-  let report;
-  try {
-    report = buildEvidenceReport(data);
-  } catch {
-    return Response.json(
-      { error: "The recording could not be verified against its outcome." },
-      { status: 422 },
-    );
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (declaredLength > MAX_RECORDING_LENGTH) {
+    return json({ error: "Recording is too large." }, 413);
   }
+
+  let raw: unknown;
+  try {
+    const body = await request.text();
+    if (body.length > MAX_RECORDING_LENGTH) {
+      return json({ error: "Recording is too large." }, 413);
+    }
+    raw = JSON.parse(body);
+  } catch {
+    return json({ error: "Send valid JSON for a finished Practice game." }, 400);
+  }
+
+  // Use the SAME strict parser and replay verification used by the Phase 6
+  // verified-brief boundary. No API call occurs before these checks pass.
+  const prepared = prepareVerifiedFocusInput(raw);
+  if (!prepared.ok) {
+    return json({ error: prepared.error }, prepared.status);
+  }
+  const { report } = prepared;
 
   const fallback = {
     focusId: report.moments[0]?.id ?? null,
@@ -86,7 +55,7 @@ export async function POST(request: Request): Promise<Response> {
   };
   const provider = getConfiguredProvider();
   if (!provider || report.moments.length === 0) {
-    return Response.json({
+    return json({
       ...fallback,
       note:
         report.moments.length === 0
@@ -106,8 +75,8 @@ export async function POST(request: Request): Promise<Response> {
   }));
 
   try {
-    // requestNarrative is the existing three-provider JSON adapter. We use its
-    // headline and summary as two constrained choice fields, not free prose.
+    // The existing provider adapter returns JSON. It can select only one of
+    // our already verified IDs and one of two presentation styles.
     const selection = await requestNarrative(
       provider,
       [
@@ -126,12 +95,12 @@ export async function POST(request: Request): Promise<Response> {
       selection?.summary,
     );
     if (!checked) {
-      return Response.json({
+      return json({
         ...fallback,
         note: "AI selection was outside the allowed evidence; the verified fallback was used.",
       });
     }
-    return Response.json({
+    return json({
       focusId: checked.focusId,
       style: checked.style,
       selectedBy: provider.id,
@@ -139,7 +108,7 @@ export async function POST(request: Request): Promise<Response> {
       note: "AI prioritized a verified moment. All displayed facts and advice remain rule-generated.",
     });
   } catch {
-    return Response.json({
+    return json({
       ...fallback,
       note: "AI selection was unavailable; verified rule-based focus was used.",
     });
