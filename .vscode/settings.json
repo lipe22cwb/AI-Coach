@@ -1,6 +1,13 @@
 {
   "cSpell.words": [
     "mindsweeper",
+    "nspname",
+    "plpgsql",
+    "proname",
+    "pronamespace",
+    "regclass",
+    "regprocedure",
+    "regrant",
     "supabase"
   ]
 }
