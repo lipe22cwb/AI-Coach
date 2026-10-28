@@ -1,4 +1,5 @@
 import type { GameplayMove } from "./types";
+import { visibleReplayHash } from "./visible-board-hash.ts";
 
 // Deterministic, read-only analysis of a Minesweeper recording.
 // Critical rule: only visible numbers, board dimensions, and total mine count
@@ -280,7 +281,13 @@ export function replayRecordedGame(game: RecordedGame): ReplayResult {
     return true;
   }
 
-  for (let n = 0; n < moves.length && status === "playing"; n += 1) {
+  let previousTime = -1;
+  for (let n = 0; n < moves.length; n += 1) {
+    if (status !== "playing") {
+      throw new Error(
+        `Recording contains an action after the game ended (move ${n + 1}).`,
+      );
+    }
     const move = moves[n];
     if (
       !move ||
@@ -295,6 +302,12 @@ export function replayRecordedGame(game: RecordedGame): ReplayResult {
       throw new Error(`Invalid action at move ${n + 1}.`);
     }
 
+    if (move.atMs !== undefined) {
+      if (!Number.isSafeInteger(move.atMs) || move.atMs < previousTime) {
+        throw new Error(`Invalid or out-of-order timestamp at move ${n + 1}.`);
+      }
+      previousTime = move.atMs;
+    }
     const index = move.row * columns + move.col;
     const before = snapshot(cells);
     const deductions = deduceVisibleBoard(rows, columns, mineCount, before);
@@ -366,9 +379,22 @@ export function replayRecordedGame(game: RecordedGame): ReplayResult {
           explanation =
             "This chord included uncertain squares while proven-safe moves were available.";
         }
-        for (const neighbour of targets) {
-          changed = reveal(neighbour) || changed;
-          if (cells.some((cell) => cell.exploded)) break;
+        if (targets.some((neighbour) => hiddenMines.has(neighbour))) {
+          // Match the LIVE Practice board exactly: a failed chord reveals
+          // every mine immediately, but does not open any safe neighbour.
+          // The old replay revealed safe cells before reaching the mine.
+          const firstMine = targets.find((neighbour) => hiddenMines.has(neighbour))!;
+          for (const mine of hiddenMines) {
+            cells[mine].revealed = true;
+            cells[mine].adjacentMines = null;
+          }
+          cells[firstMine].exploded = true;
+          status = "lost";
+          changed = true;
+        } else {
+          for (const neighbour of targets) {
+            changed = reveal(neighbour) || changed;
+          }
         }
       }
     }
@@ -378,6 +404,20 @@ export function replayRecordedGame(game: RecordedGame): ReplayResult {
         (cell, i) => cell.revealed && !hiddenMines.has(i),
       ).length;
       if (revealedSafe === total - mineCount) status = "won";
+    }
+
+    // A stamped live recording must have changed the board. Legacy recordings
+    // without checksums remain supported for the temporary five-game history.
+    if (move.afterHash !== undefined) {
+      if (!/^[0-9a-f]{8}$/.test(move.afterHash) || !changed) {
+        throw new Error(`Invalid checkpoint on move ${n + 1}.`);
+      }
+      const observed = visibleReplayHash(cells, rows, columns);
+      if (observed !== move.afterHash) {
+        throw new Error(
+          `Visible board mismatch after move ${n + 1}. The recording cannot be safely coached.`,
+        );
+      }
     }
 
     frames.push({

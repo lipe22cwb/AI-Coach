@@ -64,7 +64,9 @@ function isPracticeSession(value: unknown): value is PracticeSession {
       isNonnegativeInteger(move.col) &&
       move.col < game.columns! &&
       ["reveal", "flag", "unflag", "chord"].includes(move.action) &&
-      (move.atMs === undefined || isNonnegativeInteger(move.atMs)),
+      (move.atMs === undefined || isNonnegativeInteger(move.atMs)) &&
+      (move.afterHash === undefined ||
+        (typeof move.afterHash === "string" && /^[0-9a-f]{8}$/.test(move.afterHash))),
   );
 }
 

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 import type { GameplayMove } from "@/lib/coach/types";
+import { visibleBoardHash } from "@/lib/coach/visible-board-hash";
 import type { DifficultySettings } from "@/lib/game-settings";
 import { savePracticeSession } from "@/lib/practice/history";
 import type { PracticeSession } from "@/lib/practice/history";
@@ -196,6 +197,13 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
     [],
   );
 
+  // Capture exactly what the player could see after each accepted action.
+  // Never include hidden mine positions in the checksum.
+  const stampLastMove = useCallback((updatedBoard: GameCell[][]) => {
+    const last = recordedMoves.current.at(-1);
+    if (last) last.afterHash = visibleBoardHash(updatedBoard);
+  }, []);
+
   // Capture the real mine layout, move history, and final result after a win/loss.
   const finishRecording = useCallback(
     (finishedBoard: GameCell[][], outcome: "win" | "loss") => {
@@ -278,8 +286,9 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
 
       // Record both placing a flag and removing one.
       recordMove(row, col, cell.flagged ? "unflag" : "flag");
+      stampLastMove(next);
     },
-    [board, gameOver, mines, recordMove],
+    [board, gameOver, mines, recordMove, stampLastMove],
   );
 
   const finishIfWon = useCallback(
@@ -319,6 +328,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         working = working.map((line) =>
           line.map((cell) => ({ ...cell, revealed: cell.revealed || cell.mine })),
         );
+        stampLastMove(working);
         setBoard(working);
         setStatus("lost");
         finishRecording(working, "loss");
@@ -326,6 +336,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       }
 
       revealArea(working, [[row, col]], rows, columns);
+      stampLastMove(working);
       setBoard(working);
       finishIfWon(working);
     },
@@ -339,6 +350,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       mines,
       recordMove,
       rows,
+      stampLastMove,
     ],
   );
 
@@ -374,6 +386,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
             revealed: cell.revealed || cell.mine,
           })),
         );
+        stampLastMove(lostBoard);
         setBoard(lostBoard);
         setStatus("lost");
         finishRecording(lostBoard, "loss");
@@ -381,10 +394,20 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       }
 
       revealArea(working, toReveal, rows, columns);
+      stampLastMove(working);
       setBoard(working);
       finishIfWon(working);
     },
-    [board, columns, finishIfWon, finishRecording, gameOver, recordMove, rows],
+    [
+      board,
+      columns,
+      finishIfWon,
+      finishRecording,
+      gameOver,
+      recordMove,
+      rows,
+      stampLastMove,
+    ],
   );
 
   const handleContextMenu = (
