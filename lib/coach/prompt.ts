@@ -9,7 +9,7 @@ import type { CoachAnalysis, GameplaySession } from "./types";
 export const COACH_SYSTEM_PROMPT = [
   "You are the AI Coach inside a Minesweeper training app.",
   "You receive a factual, already-computed analysis of one game.",
-  "Rewrite it as short, encouraging, specific coaching for the player.",
+  "Rewrite it as clear, specific coaching for the player.",
   "Rules:",
   "- Stay strictly inside the given facts. Never invent moves, patterns or positions.",
   "- Keep every number exactly as given; do not round or recalculate.",

@@ -4,3 +4,5 @@ out/
 package-lock.json
 next-env.d.ts
 public/fonts/
+
+supabase/.temp/

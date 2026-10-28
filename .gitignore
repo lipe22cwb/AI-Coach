@@ -14,3 +14,5 @@ Thumbs.db
 # Internal Settings notes; keep these local to this workspace.
 /docs/SETTINGS-PAGE.md
 /docs/SETTINGS-PAGE-PLAN.md
+
+supabase/.temp/

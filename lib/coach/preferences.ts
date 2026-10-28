@@ -166,22 +166,50 @@ export function parseCoachPreferences(value: unknown): PreferenceParseResult {
 }
 
 /**
- * Shape the deterministic report for the requested explanation detail. The
- * facts and numbers are untouched; only the number of bullet points changes, so
- * the setting still has a visible effect when no AI provider is configured.
+ * Adapt the built-in rule report to the player's preferences even when no AI
+ * provider is configured. Only presentation text and bullet visibility change:
+ * headline, score, metrics, notes, key moment, and findings stay factual.
+ * The original findings are retained verbatim in the displayed bullets.
  */
 export function shapeReportForPreferences<
   T extends {
+    summary: string;
     strengths: string[];
     improvements: string[];
     nextSteps: string[];
   },
 >(report: T, preferences: CoachPreferences): T {
-  if (preferences.explanationDetail !== "brief") return report;
+  const maxBullets = preferences.explanationDetail === "brief" ? 2 : Infinity;
+  const strengths = report.strengths.slice(0, maxBullets);
+  const improvements = report.improvements.slice(0, maxBullets);
+  const nextSteps = report.nextSteps.slice(0, maxBullets);
+
+  // Balanced preserves the rule engine's neutral wording.
+  if (preferences.coachingStyle === "balanced") {
+    return { ...report, strengths, improvements, nextSteps };
+  }
+
+  // Prefix only the first bullet in each section: noticeably different tone,
+  // without adding unverified gameplay claims or repeating labels everywhere.
+  const lead = (items: string[], prefix: string): string[] =>
+    items.map((item, index) => (index === 0 ? `${prefix}${item}` : item));
+
+  if (preferences.coachingStyle === "encouraging") {
+    return {
+      ...report,
+      summary: `${report.summary} You have useful feedback to build on in your next game.`,
+      strengths: lead(strengths, "Keep building on this: "),
+      improvements: lead(improvements, "An opportunity to improve: "),
+      nextSteps: lead(nextSteps, "Try this next: "),
+    };
+  }
+
+  // Direct delivers the same evidence with concise, action-oriented framing.
   return {
     ...report,
-    strengths: report.strengths.slice(0, 2),
-    improvements: report.improvements.slice(0, 2),
-    nextSteps: report.nextSteps.slice(0, 2),
+    summary: `Bottom line: ${report.summary}`,
+    strengths,
+    improvements: lead(improvements, "Focus on this: "),
+    nextSteps: lead(nextSteps, "Next action: "),
   };
 }
