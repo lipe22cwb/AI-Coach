@@ -51,7 +51,7 @@ export function PracticeProfile() {
             Practice Review<span className="title-period">.</span>
           </h1>
           <p className="page-subtitle">
-            A small temporary history to test our game recording and coaching.
+            Review up to five recently completed Practice games, including Expert.
           </p>
         </div>
         <div className="profile-actions">
@@ -106,20 +106,13 @@ export function PracticeProfile() {
                   {formatTime(game.durationSeconds)}
                 </span>
                 <span className="recent-detail">{game.moves.length} actions</span>
-                {game.rows === game.columns ? (
-                  // Plain anchor deliberately reloads Coaching, so switching
-                  // between saved matches always triggers a fresh analysis.
-                  <a
-                    className="practice-review-link"
-                    href={`/coaching?source=practice&gameId=${encodeURIComponent(game.id)}`}
-                  >
-                    <Play size={14} aria-hidden="true" /> Review
-                  </a>
-                ) : (
-                  <span className="practice-review-unavailable">
-                    Report unavailable for rectangular boards
-                  </span>
-                )}
+                {/* Verified replay supports both square and rectangular Practice boards. */}
+                <a
+                  className="practice-review-link"
+                  href={"/coaching?source=practice&gameId=" + encodeURIComponent(game.id)}
+                >
+                  <Play size={14} aria-hidden="true" /> Review game
+                </a>
               </div>
             ))}
           </div>

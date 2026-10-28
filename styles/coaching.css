@@ -506,3 +506,37 @@
   font-size: 14px;
   line-height: 1.6;
 }
+
+/* Phase 8.2: keep experimental reports distinct from verified review. */
+.coach-demo-tests {
+  margin: 16px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.coach-demo-tests summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.coach-demo-tests p {
+  margin: 12px 0;
+}
+.coach-demo-tests .coach-actions {
+  margin: 12px 0 0;
+}
+.coach-guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #f1b5bb;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.coach-guide-link:hover {
+  color: white;
+}

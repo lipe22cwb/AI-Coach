@@ -123,7 +123,7 @@ export function SignInForm() {
       </div>
 
       <div className="auth-card-content">
-        <p className="eyebrow">YOUR COACHING PROFILE</p>
+        <p className="eyebrow">YOUR ACCOUNT</p>
 
         <h1 id="auth-heading">
           {mode === "sign-in" ? "Welcome back." : "Start improving."}
@@ -131,8 +131,8 @@ export function SignInForm() {
 
         <p className="auth-intro">
           {mode === "sign-in"
-            ? "Sign in to continue your Ranked progress, coaching history, and saved games."
-            : "Create an account to save your games, build a player profile, and unlock Ranked mode later."}
+            ? "Sign in for authenticated Ranked matches and account settings. Practice reviews remain temporary in this browser tab."
+            : "Create an account for authenticated Ranked matches. Practice game history is not yet saved to your account."}
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>

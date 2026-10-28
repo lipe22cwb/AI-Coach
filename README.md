@@ -39,7 +39,7 @@ Open http://localhost:3000 in your browser.
 - Sign-in and account creation pages
 - Supabase email/password authentication
 - Sign-out functionality
-- Player profile page with placeholder statistics
+- Temporary Practice Review page showing up to five completed games from the current browser tab
 
 Authentication requires a configured Supabase project.
 
@@ -47,11 +47,11 @@ Authentication requires a configured Supabase project.
 
 - Dedicated Coaching page
 - Game analysis using a rule-based engine
-- Optional AI-generated explanations through an external provider
-- Reports highlighting gameplay decisions and improvements
+- Optional AI selection of an existing, rule-verified coaching focus
+- Evidence-based post-game report, move replay, and one follow-up question
 - Coaching API at `/api/coach`
 
-The Coaching page currently uses sample sessions rather than completed games from the live board.
+Completed Practice games can be reviewed from the game-over screen or the temporary Practice Review history. An older experimental sample-report engine remains available separately for comparison.
 
 ### Settings
 
@@ -60,15 +60,15 @@ The Coaching page currently uses sample sessions rather than completed games fro
 - Personal improvement goals
 - Local browser storage for preferences
 
-Settings are not yet fully connected to user accounts or coaching responses.
+Guest settings use browser storage; signed-in settings can use the Supabase account adapter when the database is configured. Coaching personalization is not part of the verified MVP.
 
 ### Ranked System
 
-- Prototype Ranked results API at `/api/ranked-results`
-- Recording and retrieving submitted winning results
-- Results organized by board configuration
+- Experimental authenticated Ranked matches backed by Supabase RPCs
+- Server-verified reveal, flag, chord, and match restoration routes
+- Unverified Ranked result submissions intentionally disabled
 
-Ranked gameplay, verified results, competitive ratings, and production database storage still need implementation.
+Ranked depends on its separate database functions and environment; competitive ratings, leaderboards, and full production readiness are outside the revised Practice-coaching MVP.
 
 ## Project Structure
 
@@ -100,25 +100,18 @@ Never commit API keys or secret credentials.
 
 The project is still under active development.
 
-Major remaining tasks include:
-
-- Recording and saving complete gameplay sessions
-- Connecting live gameplay to AI coaching
-- Persistent database storage
-- Real player statistics and game history
-- Fully functional Ranked mode
-- Leaderboards and player progression
-- Automated testing and deployment
+The revised coaching MVP supports Play → Record → Analyze → Coach → Improve for individual Practice games. Remaining priorities include independent real-player usability testing, team integration, deployment checks, and a future optional AI backend. Permanent coaching profiles, Ranked rating progression and leaderboards are deferred.
 
 ## Testing
 
-Run the project checks:
+Run both the gameplay regression tests and project checks:
 
 ```bash
+npm test
 npm run check
 ```
 
-This checks formatting, the production build, and TypeScript. It does not replace manual gameplay and integration testing.
+GitHub Actions runs both after the Phase 8.1 update. Manual Practice, Expert replay, and integration checks are still necessary.
 
 ## Team Collaboration
 

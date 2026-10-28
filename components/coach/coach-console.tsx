@@ -170,11 +170,11 @@ export function CoachConsole() {
     <div className="coach-layout">
       <section className="coach-controls" aria-label="Run a coaching analysis">
         <span className="subtle-label">Gameplay analyser</span>
-        <h2>Send a game, get a report.</h2>
+        <h2>Review a finished Practice game.</h2>
         <p className="coach-controls-copy">
-          Review real Practice decisions with board evidence and a short teaching report.
-          Optionally ask AI to prioritize one verified focus area. The older draft reports
-          remain available for comparison.
+          Review your recorded moves, inspect the visible-board evidence, and ask one
+          follow-up question. AI prioritization is optional; prototype sample reports are
+          clearly separated below.
         </p>
 
         <span className="coach-provider" data-ready={status?.configured ? "yes" : "no"}>
@@ -204,30 +204,40 @@ export function CoachConsole() {
               ) : (
                 <Play size={15} aria-hidden="true" />
               )}
-              Review My Verified Moves
+              Review Verified Game
             </button>
           )}
-          {SAMPLES.map(({ key, label, session }) => (
-            <button
-              key={key}
-              type="button"
-              className="coach-btn"
-              onClick={() => {
-                setSelectedReplay(null);
-                setReplayFocus(null);
-                void analyze(key, session);
-              }}
-              disabled={loadingKey !== null}
-            >
-              {loadingKey === key ? (
-                <Loader2 className="coach-spin" size={16} aria-hidden="true" />
-              ) : (
-                <Play size={15} aria-hidden="true" />
-              )}
-              {label} (demo)
-            </button>
-          ))}
         </div>
+
+        <details className="coach-demo-tests">
+          <summary>Experimental sample reports (not verified)</summary>
+          <p>
+            These examples use the earlier scoring engine for comparison, not your
+            recorded game. Results may be approximate or unsupported.
+          </p>
+          <div className="coach-actions">
+            {SAMPLES.map(({ key, label, session }) => (
+              <button
+                key={key}
+                type="button"
+                className="coach-btn"
+                onClick={() => {
+                  setSelectedReplay(null);
+                  setReplayFocus(null);
+                  void analyze(key, session);
+                }}
+                disabled={loadingKey !== null}
+              >
+                {loadingKey === key ? (
+                  <Loader2 className="coach-spin" size={16} aria-hidden="true" />
+                ) : (
+                  <Play size={15} aria-hidden="true" />
+                )}
+                {label} (demo)
+              </button>
+            ))}
+          </div>
+        </details>
 
         <ul className="coach-help">
           <li>

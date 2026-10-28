@@ -498,7 +498,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
           {" · "}
           {finishedResult.actions} actions
           {" · "}
-          <Link href="/coaching?source=practice">AI Coach Feedback</Link>
+          <Link href="/coaching?source=practice">Review This Game</Link>
         </div>
       )}
 
