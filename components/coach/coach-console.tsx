@@ -4,10 +4,11 @@ import { Loader2, Play, Sparkles, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CoachReportView } from "@/components/coach/coach-report-view";
+import { VerifiedReplayPanel } from "@/components/coach/verified-replay-panel";
 import { analyzeGameplay, toRuleReport } from "@/lib/coach/analyze";
 import { SAMPLE_LOSS_SESSION, SAMPLE_WIN_SESSION } from "@/lib/coach/sample-session";
 import type { CoachResult, GameplaySession } from "@/lib/coach/types";
-import { loadPracticeSession } from "@/lib/practice/history";
+import { loadPracticeSession, type PracticeSession } from "@/lib/practice/history";
 
 type ProviderStatus = {
   configured: boolean;
@@ -15,7 +16,8 @@ type ProviderStatus = {
 };
 
 type RecordedGame = {
-  session: GameplaySession;
+  session: GameplaySession | null;
+  practice: PracticeSession;
   summary: string;
 };
 
@@ -40,27 +42,26 @@ function loadSelectedPracticeGame(gameId: string | null): {
     };
   }
 
-  // The current analysis engine expects square boards. Never reshape 16x30
-  // Expert data into a false 16x16 board and present invented coaching.
-  if (value.rows !== value.columns) {
-    return {
-      game: null,
-      message: `Your ${value.rows} × ${value.columns} ${value.difficulty} game was recorded, but verified coaching for rectangular boards is not available yet.`,
-    };
-  }
+  // Verified replay supports rectangular Expert games, but the previous
+  // AI coaching API is square-only. Never reinterpret a 16x30 board as 16x16.
+  const squareSession: GameplaySession | null =
+    value.rows === value.columns
+      ? {
+          game: "minesweeper",
+          difficulty: value.difficulty,
+          boardSize: value.rows,
+          mineCount: value.mineCount,
+          outcome: value.outcome,
+          durationSeconds: value.durationSeconds,
+          mines: value.mines,
+          moves: value.moves,
+        }
+      : null;
 
   return {
     game: {
-      session: {
-        game: "minesweeper",
-        difficulty: value.difficulty,
-        boardSize: value.rows,
-        mineCount: value.mineCount,
-        outcome: value.outcome,
-        durationSeconds: value.durationSeconds,
-        mines: value.mines,
-        moves: value.moves,
-      },
+      session: squareSession,
+      practice: value,
       summary: `${value.difficulty} · ${value.rows} × ${value.columns} · ${value.outcome === "win" ? "Win" : "Loss"} · ${value.moves.length} actions`,
     },
     message: "",
@@ -74,6 +75,7 @@ export function CoachConsole() {
   const [result, setResult] = useState<CoachResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastGame, setLastGame] = useState<RecordedGame | null>(null);
+  const [selectedReplay, setSelectedReplay] = useState<PracticeSession | null>(null);
   const [practiceMessage, setPracticeMessage] = useState("");
   const autoAnalysisStarted = useRef(false);
 
@@ -138,7 +140,10 @@ export function CoachConsole() {
     if (params.get("source") === "practice" && !autoAnalysisStarted.current) {
       autoAnalysisStarted.current = true;
       if (saved.game) {
-        void analyze("practice", saved.game.session);
+        setSelectedReplay(saved.game.practice);
+        if (saved.game.session) {
+          void analyze("practice", saved.game.session);
+        }
       } else {
         setError(saved.message);
       }
@@ -181,7 +186,15 @@ export function CoachConsole() {
             <button
               type="button"
               className="coach-btn"
-              onClick={() => analyze("practice", lastGame.session)}
+              onClick={() => {
+                setSelectedReplay(lastGame.practice);
+                if (lastGame.session) {
+                  void analyze("practice", lastGame.session);
+                } else {
+                  setResult(null);
+                  setError(null);
+                }
+              }}
               disabled={loadingKey !== null}
             >
               {loadingKey === "practice" ? (
@@ -189,7 +202,7 @@ export function CoachConsole() {
               ) : (
                 <Play size={15} aria-hidden="true" />
               )}
-              Analyze Selected Practice Game
+              Review My Verified Moves
             </button>
           )}
           {SAMPLES.map(({ key, label, session }) => (
@@ -197,7 +210,10 @@ export function CoachConsole() {
               key={key}
               type="button"
               className="coach-btn"
-              onClick={() => analyze(key, session)}
+              onClick={() => {
+                setSelectedReplay(null);
+                void analyze(key, session);
+              }}
               disabled={loadingKey !== null}
             >
               {loadingKey === key ? (
@@ -212,14 +228,14 @@ export function CoachConsole() {
 
         <ul className="coach-help">
           <li>
-            Play a Beginner or Intermediate Practice game and finish it to get feedback.
+            Finish any Practice game to replay verified board decisions, including Expert.
           </li>
           <li>
             Up to five recent Practice games are stored temporarily in this browser tab.
           </li>
           <li>
-            Game data goes to the coaching API; if an AI provider is configured, coaching
-            findings may also be sent to that provider.
+            Verified replay runs locally. The older experimental narrative for square
+            games may contact the coaching API and its configured AI provider.
           </li>
         </ul>
 
@@ -232,7 +248,31 @@ export function CoachConsole() {
       </section>
 
       <section aria-label="Coaching report" aria-live="polite">
-        {result ? (
+        {selectedReplay ? (
+          <>
+            <VerifiedReplayPanel game={selectedReplay} />
+            {lastGame?.session && (result || loadingKey === "practice") ? (
+              <details className="verified-experimental">
+                <summary>Earlier AI coach draft (experimental)</summary>
+                <p>
+                  This older report uses simpler analysis rules and includes a prototype
+                  grade. Treat its claims and scores as unverified; use the move replay
+                  above for evidence-backed classifications.
+                </p>
+                {result ? (
+                  <div className="coach-report-panel">
+                    <CoachReportView
+                      report={result.report}
+                      fallbackReason={result.fallbackReason}
+                    />
+                  </div>
+                ) : (
+                  <p>Preparing experimental report…</p>
+                )}
+              </details>
+            ) : null}
+          </>
+        ) : result ? (
           <div className="coach-report-panel">
             <CoachReportView
               report={result.report}

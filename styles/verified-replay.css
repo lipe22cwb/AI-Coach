@@ -1,0 +1,217 @@
+/* Verified, evidence-backed board replay. Kept separate from experimental coach prose. */
+.verified-report {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  min-width: 0;
+}
+.verified-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 7px 0 8px;
+  font-family: var(--heading-font);
+  font-size: clamp(24px, 2.6vw, 34px);
+}
+.verified-heading h3 svg {
+  color: #81d39a;
+}
+.verified-heading p,
+.verified-note,
+.verified-legend {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.verified-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px 0;
+}
+.verified-totals > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px;
+  background: #222;
+  border-radius: 6px;
+}
+.verified-totals strong {
+  font-size: 22px;
+}
+.verified-totals span {
+  flex-basis: 100%;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.verified-moments {
+  margin: 22px 0;
+}
+.verified-moments h4,
+.verified-board-panel h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 650;
+}
+.verified-moment-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.verified-moment,
+.verified-move-nav button,
+.verified-move-nav select {
+  min-height: 40px;
+  background: #282828;
+  color: #eee;
+  border: 1px solid #3b3b3b;
+  border-radius: 5px;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+.verified-moment:hover,
+.verified-move-nav button:hover:not(:disabled) {
+  background: #383838;
+}
+.verified-moment.active {
+  background: #84212e;
+  border-color: #cf4655;
+}
+.verified-move-nav {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+.verified-move-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.verified-move-nav button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.verified-move-nav label {
+  flex: 1 1 190px;
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.verified-move-nav select {
+  min-width: 0;
+  width: 100%;
+}
+.verified-decision {
+  padding: 14px;
+  border-left: 3px solid var(--red);
+  background: #1f1f1f;
+  border-radius: 4px;
+}
+.verified-decision strong {
+  display: block;
+  font-size: 16px;
+}
+.verified-decision > span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin: 6px 0;
+}
+.verified-decision p {
+  margin: 9px 0 0;
+  line-height: 1.6;
+}
+.verified-decision .verified-evidence {
+  font-size: 12px;
+  color: #c8d5c8;
+}
+.verified-boards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.verified-board-panel {
+  min-width: 0;
+}
+.verified-board-scroll {
+  overflow: auto;
+  max-height: 430px;
+  border-radius: 5px;
+  background: #111;
+  padding: 5px;
+}
+.verified-board {
+  display: grid;
+  gap: 2px;
+  width: max-content;
+}
+.verified-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  aspect-ratio: 1;
+  font-size: 12px;
+  border-radius: 2px;
+  font-weight: 700;
+}
+.verified-covered {
+  background: #383838;
+}
+.verified-revealed {
+  background: #1e1e1e;
+}
+.verified-flagged {
+  color: #ff7078;
+}
+.verified-selected {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+.verified-exploded {
+  background: #9d2937;
+}
+.verified-safe:not(.verified-revealed) {
+  color: #80d7a5;
+}
+.verified-mine:not(.verified-revealed) {
+  color: #ffb36b;
+}
+.verified-experimental {
+  margin-top: 16px;
+  padding: 13px;
+  border: 1px solid #444;
+  border-radius: 6px;
+}
+.verified-experimental summary {
+  color: #ddd;
+  font-size: 13px;
+  font-weight: 650;
+}
+.verified-experimental > p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+  font-size: 12px;
+}
+.verified-experimental .coach-report-panel {
+  margin-top: 14px;
+}
+@media (max-width: 750px) {
+  .verified-boards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .verified-totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .verified-report {
+    padding: 14px;
+  }
+}
