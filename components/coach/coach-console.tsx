@@ -6,29 +6,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CoachReportView } from "@/components/coach/coach-report-view";
 import { analyzeGameplay, toRuleReport } from "@/lib/coach/analyze";
 import { SAMPLE_LOSS_SESSION, SAMPLE_WIN_SESSION } from "@/lib/coach/sample-session";
-import type { CoachResult, GameplaySession, MoveAction } from "@/lib/coach/types";
-
-// Keep this key in sync with the Practice board's recorder.
-const LAST_PRACTICE_GAME_KEY = "mindsweeper.practice.lastCompletedGame.v1";
-
-// The coach's current game format supports square boards. We retain the actual
-// rows and columns in storage so an Expert game is never analysed incorrectly.
-type SavedPracticeGame = {
-  game: "minesweeper";
-  difficulty: string;
-  rows: number;
-  columns: number;
-  mineCount: number;
-  outcome: "win" | "loss";
-  durationSeconds: number;
-  mines: number[];
-  moves: {
-    row: number;
-    col: number;
-    action: MoveAction;
-    atMs?: number;
-  }[];
-};
+import type { CoachResult, GameplaySession } from "@/lib/coach/types";
+import { loadPracticeSession } from "@/lib/practice/history";
 
 type ProviderStatus = {
   configured: boolean;
@@ -45,71 +24,28 @@ const SAMPLES: Array<{ key: string; label: string; session: GameplaySession }> =
   { key: "win", label: "Analyze a win", session: SAMPLE_WIN_SESSION },
 ];
 
-function isPositiveInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0;
-}
-
-function loadLastPracticeGame(): { game: RecordedGame | null; message: string } {
-  let raw: string | null;
-  try {
-    raw = window.sessionStorage.getItem(LAST_PRACTICE_GAME_KEY);
-  } catch {
-    return { game: null, message: "Browser storage is unavailable." };
-  }
-
-  if (!raw) {
+function loadSelectedPracticeGame(gameId: string | null): {
+  game: RecordedGame | null;
+  message: string;
+} {
+  // Use the same validated temporary-session store as the Practice Review page.
+  // The id is optional; no id means the latest completed Practice game.
+  const value = loadPracticeSession(gameId);
+  if (!value) {
     return {
       game: null,
-      message: "Finish a Practice game first to unlock your own coaching report.",
+      message: gameId
+        ? "That game is no longer in this browser tab's recent recordings."
+        : "Finish a Practice game first to unlock your own coaching report.",
     };
   }
 
-  let value: SavedPracticeGame;
-  try {
-    value = JSON.parse(raw) as SavedPracticeGame;
-  } catch {
-    return { game: null, message: "Your last Practice recording could not be read." };
-  }
-
-  if (
-    !value ||
-    typeof value !== "object" ||
-    !isPositiveInteger(value.rows) ||
-    !isPositiveInteger(value.columns) ||
-    value.rows < 2 ||
-    value.columns < 2 ||
-    !isPositiveInteger(value.mineCount) ||
-    value.mineCount >= value.rows * value.columns ||
-    !isPositiveInteger(value.durationSeconds) ||
-    !["win", "loss"].includes(value.outcome) ||
-    typeof value.difficulty !== "string" ||
-    !Array.isArray(value.mines) ||
-    value.mines.length !== value.mineCount ||
-    !value.mines.every(
-      (index) => isPositiveInteger(index) && index < value.rows * value.columns,
-    ) ||
-    new Set(value.mines).size !== value.mineCount ||
-    !Array.isArray(value.moves) ||
-    value.moves.length === 0 ||
-    !value.moves.every(
-      (move) =>
-        move &&
-        isPositiveInteger(move.row) &&
-        move.row < value.rows &&
-        isPositiveInteger(move.col) &&
-        move.col < value.columns &&
-        ["reveal", "flag", "unflag", "chord"].includes(move.action),
-    )
-  ) {
-    return { game: null, message: "The Practice recording is incomplete or invalid." };
-  }
-
-  // We cannot safely reinterpret a 16×30 Expert board as 16×16; that would
-  // generate incorrect feedback. Rectangular support is a separate upgrade.
+  // The current analysis engine expects square boards. Never reshape 16x30
+  // Expert data into a false 16x16 board and present invented coaching.
   if (value.rows !== value.columns) {
     return {
       game: null,
-      message: `Your ${value.rows} × ${value.columns} ${value.difficulty} game was recorded, but the coaching engine does not yet support rectangular boards. Try Beginner or Intermediate for now.`,
+      message: `Your ${value.rows} × ${value.columns} ${value.difficulty} game was recorded, but verified coaching for rectangular boards is not available yet.`,
     };
   }
 
@@ -173,9 +109,10 @@ export function CoachConsole() {
         const payload = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(
-          payload?.error ?? `The coaching API replied with ${response.status}.`,
-        );
+        // Invalid input must be surfaced, not silently reanalysed and treated
+        // as a verified report by the browser fallback.
+        setError(payload?.error ?? `The coaching API replied with ${response.status}.`);
+        return;
       }
       setResult((await response.json()) as CoachResult);
     } catch {
@@ -193,14 +130,12 @@ export function CoachConsole() {
   // A finished Practice match links here with ?source=practice. Automatically
   // analyse it once on arrival; the player can rerun the report using the button.
   useEffect(() => {
-    const saved = loadLastPracticeGame();
+    const params = new URLSearchParams(window.location.search);
+    const saved = loadSelectedPracticeGame(params.get("gameId"));
     setLastGame(saved.game);
     setPracticeMessage(saved.message);
 
-    if (
-      window.location.search.includes("source=practice") &&
-      !autoAnalysisStarted.current
-    ) {
+    if (params.get("source") === "practice" && !autoAnalysisStarted.current) {
       autoAnalysisStarted.current = true;
       if (saved.game) {
         void analyze("practice", saved.game.session);
@@ -238,7 +173,7 @@ export function CoachConsole() {
         </span>
 
         <p className="coach-controls-copy">
-          {lastGame ? `Latest Practice game: ${lastGame.summary}` : practiceMessage}
+          {lastGame ? `Selected Practice game: ${lastGame.summary}` : practiceMessage}
         </p>
 
         <div className="coach-actions">
@@ -254,7 +189,7 @@ export function CoachConsole() {
               ) : (
                 <Play size={15} aria-hidden="true" />
               )}
-              Analyze My Last Game
+              Analyze Selected Practice Game
             </button>
           )}
           {SAMPLES.map(({ key, label, session }) => (
@@ -279,7 +214,9 @@ export function CoachConsole() {
           <li>
             Play a Beginner or Intermediate Practice game and finish it to get feedback.
           </li>
-          <li>Your latest completed game is stored in this browser tab.</li>
+          <li>
+            Up to five recent Practice games are stored temporarily in this browser tab.
+          </li>
           <li>
             Game data goes to the coaching API; if an AI provider is configured, coaching
             findings may also be sent to that provider.

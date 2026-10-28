@@ -7,6 +7,8 @@ import Link from "next/link";
 
 import type { GameplayMove } from "@/lib/coach/types";
 import type { DifficultySettings } from "@/lib/game-settings";
+import { savePracticeSession } from "@/lib/practice/history";
+import type { PracticeSession } from "@/lib/practice/history";
 import type { GameCell } from "./board-fixture";
 import { GameStats } from "./game-stats";
 
@@ -14,23 +16,6 @@ type GameStatus = "ready" | "playing" | "won" | "lost";
 type InputMode = "reveal" | "flag";
 type Position = [number, number];
 type MinesweeperBoardProps = { settings: DifficultySettings };
-
-// A completed Practice game. Rows and columns are separate so Expert (16x30)
-// games are recorded correctly, even though the coach API is square-only today.
-type RecordedPracticeSession = {
-  game: "minesweeper";
-  difficulty: string;
-  rows: number;
-  columns: number;
-  mineCount: number;
-  outcome: "win" | "loss";
-  durationSeconds: number;
-  mines: number[];
-  moves: GameplayMove[];
-};
-
-// We save only the last finished Practice game for the next coaching step.
-const LAST_PRACTICE_GAME_KEY = "mindsweeper.practice.lastCompletedGame.v1";
 
 const numberClasses: Record<number, string> = {
   1: "number-one",
@@ -186,6 +171,11 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
   const recordedMoves = useRef<GameplayMove[]>([]);
   const startedAt = useRef<number | null>(null);
   const sessionFinished = useRef(false);
+  const [finishedResult, setFinishedResult] = useState<{
+    outcome: "win" | "loss";
+    durationSeconds: number;
+    actions: number;
+  } | null>(null);
 
   // Only record actions that actually change the game.
   const recordMove = useCallback(
@@ -221,7 +211,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         });
       });
 
-      const session: RecordedPracticeSession = {
+      const session: PracticeSession = {
         game: "minesweeper",
         difficulty: settings.label,
         rows,
@@ -233,13 +223,14 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         moves: recordedMoves.current.map((move) => ({ ...move })),
       };
 
-      // sessionStorage survives navigating to Coaching in the same browser tab.
-      // If the browser blocks storage, gameplay and console logging still work.
-      try {
-        window.sessionStorage.setItem(LAST_PRACTICE_GAME_KEY, JSON.stringify(session));
-      } catch {
-        console.warn("Practice recording could not be saved to sessionStorage.");
-      }
+      // Keep a small, temporary, full-move history so the report can replay
+      // what the player actually saw. No lifetime or ranked stats are saved.
+      savePracticeSession(session);
+      setFinishedResult({
+        outcome,
+        durationSeconds: session.durationSeconds,
+        actions: session.moves.length,
+      });
 
       console.log("Completed Practice game:", session);
     },
@@ -263,6 +254,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
     recordedMoves.current = [];
     startedAt.current = null;
     sessionFinished.current = false;
+    setFinishedResult(null);
     setBoard(emptyBoard(rows, columns));
     setStatus("ready");
     setFirstClick(true);
@@ -475,21 +467,16 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         </button>
       </div>
 
-      {status === "won" && (
-        <p className="game-message" role="status">
-          You win! All safe cells are revealed.
-        </p>
-      )}
-      {status === "lost" && (
-        <p className="game-message" role="status">
-          Boom! You hit a mine. Start a new game to try again.
-        </p>
-      )}
-
-      {gameOver && (
-        <p className="game-message">
-          <Link href="/coaching?source=practice">Analyze My Game →</Link>
-        </p>
+      {gameOver && finishedResult && (
+        <div className="game-message" role="status">
+          <strong>{finishedResult.outcome === "win" ? "WIN" : "LOSS"}</strong>
+          {" · "}
+          {formatTime(finishedResult.durationSeconds)}
+          {" · "}
+          {finishedResult.actions} actions
+          {" · "}
+          <Link href="/coaching?source=practice">AI Coach Feedback</Link>
+        </div>
       )}
 
       <div className="board-area">
