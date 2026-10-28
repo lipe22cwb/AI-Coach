@@ -3,7 +3,9 @@
 import { Bomb, Flag, FlagTriangleRight, Grid2X2, MousePointer2 } from "lucide-react";
 import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 
+import type { GameplayMove } from "@/lib/coach/types";
 import type { DifficultySettings } from "@/lib/game-settings";
 import type { GameCell } from "./board-fixture";
 import { GameStats } from "./game-stats";
@@ -12,6 +14,23 @@ type GameStatus = "ready" | "playing" | "won" | "lost";
 type InputMode = "reveal" | "flag";
 type Position = [number, number];
 type MinesweeperBoardProps = { settings: DifficultySettings };
+
+// A completed Practice game. Rows and columns are separate so Expert (16x30)
+// games are recorded correctly, even though the coach API is square-only today.
+type RecordedPracticeSession = {
+  game: "minesweeper";
+  difficulty: string;
+  rows: number;
+  columns: number;
+  mineCount: number;
+  outcome: "win" | "loss";
+  durationSeconds: number;
+  mines: number[];
+  moves: GameplayMove[];
+};
+
+// We save only the last finished Practice game for the next coaching step.
+const LAST_PRACTICE_GAME_KEY = "mindsweeper.practice.lastCompletedGame.v1";
 
 const numberClasses: Record<number, string> = {
   1: "number-one",
@@ -163,6 +182,70 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
   const [focusedCell, setFocusedCell] = useState({ row: 0, col: 0 });
   const cellRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  // useRef keeps the recording between renders without updating the screen.
+  const recordedMoves = useRef<GameplayMove[]>([]);
+  const startedAt = useRef<number | null>(null);
+  const sessionFinished = useRef(false);
+
+  // Only record actions that actually change the game.
+  const recordMove = useCallback(
+    (row: number, col: number, action: GameplayMove["action"]) => {
+      const now = Date.now();
+      if (startedAt.current === null) startedAt.current = now;
+
+      const move: GameplayMove = {
+        row,
+        col,
+        action,
+        atMs: now - startedAt.current,
+      };
+
+      recordedMoves.current.push(move);
+      console.log("Recorded Practice move:", move);
+    },
+    [],
+  );
+
+  // Capture the real mine layout, move history, and final result after a win/loss.
+  const finishRecording = useCallback(
+    (finishedBoard: GameCell[][], outcome: "win" | "loss") => {
+      // Do not save the same finished game twice.
+      if (sessionFinished.current) return;
+      sessionFinished.current = true;
+
+      const now = Date.now();
+      const minePositions: number[] = [];
+      finishedBoard.forEach((line, row) => {
+        line.forEach((cell, col) => {
+          if (cell.mine) minePositions.push(row * columns + col);
+        });
+      });
+
+      const session: RecordedPracticeSession = {
+        game: "minesweeper",
+        difficulty: settings.label,
+        rows,
+        columns,
+        mineCount: mines,
+        outcome,
+        durationSeconds: Math.floor((now - (startedAt.current ?? now)) / 1000),
+        mines: minePositions,
+        moves: recordedMoves.current.map((move) => ({ ...move })),
+      };
+
+      // sessionStorage survives navigating to Coaching in the same browser tab.
+      // If the browser blocks storage, gameplay and console logging still work.
+      try {
+        window.sessionStorage.setItem(LAST_PRACTICE_GAME_KEY, JSON.stringify(session));
+      } catch {
+        console.warn("Practice recording could not be saved to sessionStorage.");
+      }
+
+      console.log("Completed Practice game:", session);
+    },
+    [columns, mines, rows, settings.label],
+  );
+
   const flaggedCount = useMemo(
     () => board.flat().filter((cell) => cell.flagged).length,
     [board],
@@ -176,6 +259,10 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
   }, [status]);
 
   const newGame = useCallback(() => {
+    // Start a fresh recording without mixing moves from the previous board.
+    recordedMoves.current = [];
+    startedAt.current = null;
+    sessionFinished.current = false;
     setBoard(emptyBoard(rows, columns));
     setStatus("ready");
     setFirstClick(true);
@@ -186,17 +273,21 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
   const toggleFlag = useCallback(
     (row: number, col: number) => {
       if (gameOver) return;
-      setBoard((current) => {
-        const cell = current[row][col];
-        if (cell.revealed) return current;
-        const currentFlagCount = current.flat().filter((item) => item.flagged).length;
-        if (!cell.flagged && currentFlagCount >= mines) return current;
-        const next = current.map((line) => line.map((item) => ({ ...item })));
-        next[row][col].flagged = !next[row][col].flagged;
-        return next;
-      });
+
+      const cell = board[row][col];
+      if (cell.revealed) return;
+
+      const currentFlagCount = board.flat().filter((item) => item.flagged).length;
+      if (!cell.flagged && currentFlagCount >= mines) return;
+
+      const next = board.map((line) => line.map((item) => ({ ...item })));
+      next[row][col].flagged = !cell.flagged;
+      setBoard(next);
+
+      // Record both placing a flag and removing one.
+      recordMove(row, col, cell.flagged ? "unflag" : "flag");
     },
-    [gameOver, mines],
+    [board, gameOver, mines, recordMove],
   );
 
   const finishIfWon = useCallback(
@@ -204,10 +295,14 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       const revealedSafeCells = nextBoard
         .flat()
         .filter((cell) => cell.revealed && !cell.mine).length;
-      if (revealedSafeCells === rows * columns - mines) setStatus("won");
-      else setStatus("playing");
+      if (revealedSafeCells === rows * columns - mines) {
+        setStatus("won");
+        finishRecording(nextBoard, "win");
+      } else {
+        setStatus("playing");
+      }
     },
-    [columns, mines, rows],
+    [columns, finishRecording, mines, rows],
   );
 
   const revealCell = useCallback(
@@ -215,6 +310,8 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       if (gameOver) return;
       let working = board.map((line) => line.map((cell) => ({ ...cell })));
       if (working[row][col].revealed || working[row][col].flagged) return;
+
+      recordMove(row, col, "reveal");
 
       if (firstClick) {
         const flags = working.map((line) => line.map((cell) => cell.flagged));
@@ -232,6 +329,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         );
         setBoard(working);
         setStatus("lost");
+        finishRecording(working, "loss");
         return;
       }
 
@@ -239,7 +337,17 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       setBoard(working);
       finishIfWon(working);
     },
-    [board, columns, firstClick, finishIfWon, gameOver, mines, rows],
+    [
+      board,
+      columns,
+      firstClick,
+      finishIfWon,
+      finishRecording,
+      gameOver,
+      mines,
+      recordMove,
+      rows,
+    ],
   );
 
   // Chording: if both mouse buttons are held on a revealed number (or the middle
@@ -259,6 +367,9 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       const toReveal = neighbors.filter(
         ([r, c]) => !working[r][c].flagged && !working[r][c].revealed,
       );
+      if (toReveal.length === 0) return;
+
+      recordMove(row, col, "chord");
 
       // If any unflagged neighbor is a mine, chording reveals it and ends the game.
       if (toReveal.some(([r, c]) => working[r][c].mine)) {
@@ -273,6 +384,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         );
         setBoard(lostBoard);
         setStatus("lost");
+        finishRecording(lostBoard, "loss");
         return;
       }
 
@@ -280,7 +392,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       setBoard(working);
       finishIfWon(working);
     },
-    [board, finishIfWon, gameOver, rows, columns],
+    [board, columns, finishIfWon, finishRecording, gameOver, recordMove, rows],
   );
 
   const handleContextMenu = (
@@ -371,6 +483,12 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       {status === "lost" && (
         <p className="game-message" role="status">
           Boom! You hit a mine. Start a new game to try again.
+        </p>
+      )}
+
+      {gameOver && (
+        <p className="game-message">
+          <Link href="/coaching?source=practice">Analyze My Game →</Link>
         </p>
       )}
 
