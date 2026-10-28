@@ -1,0 +1,68 @@
+/* Small temporary Practice session review, not a lifetime profile. */
+.profile-page .profile-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.practice-session-card {
+  margin-top: 24px;
+}
+
+.practice-recent-game {
+  grid-template-columns: auto minmax(190px, 1fr) auto auto auto;
+}
+
+.practice-review-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #fff;
+  background: #b62634;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.practice-review-link:hover {
+  background: #c42b39;
+}
+
+.practice-review-unavailable {
+  max-width: 170px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.practice-empty-history {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .practice-recent-game {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .practice-recent-game .recent-detail {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-page .profile-summary {
+    grid-template-columns: 1fr;
+  }
+  .practice-recent-game {
+    gap: 10px;
+  }
+  .practice-review-link {
+    padding: 9px;
+  }
+  .practice-review-unavailable {
+    font-size: 10px;
+  }
+}

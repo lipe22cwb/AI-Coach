@@ -16,6 +16,8 @@ export type GameplayMove = {
   action: MoveAction;
   /** Optional time since the game started, in milliseconds. */
   atMs?: number;
+  /** Optional Phase 5 checksum of the visible board after the action. */
+  afterHash?: string;
 };
 
 export type GameplayOutcome = "win" | "loss" | "in-progress";

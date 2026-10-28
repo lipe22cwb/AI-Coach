@@ -39,9 +39,17 @@ Open http://localhost:3000 in your browser.
 - Sign-in and account creation pages
 - Supabase email/password authentication
 - Sign-out functionality
-- Player profile page with placeholder statistics
+- Practice Review profile showing up to five finished games from this browser tab (not a permanent lifetime profile)
 
 Authentication requires a configured Supabase project.
+
+### Practice History and Verified Replays
+
+- Temporarily saves up to five completed Practice games in the current browser tab (sessionStorage)
+- Interactive move-by-move replay with visible-board checkpoints and evidence-based deductions
+- Verified coaching explanations and follow-up questions are distinct from experimental AI-generated wording
+- The last game is also saved separately in localStorage for the original Coaching report
+- Browser-held recordings are not tamper-proof server verification and are not Ranked results
 
 ### AI Coaching
 
@@ -70,11 +78,10 @@ Account-backed persistence still depends on the configured Supabase project.
 
 ### Ranked System
 
-- Prototype Ranked results API at `/api/ranked-results`
-- Recording and retrieving submitted winning results
-- Results organized by board configuration
-
-Ranked gameplay, verified results, competitive ratings, and production database storage still need implementation.
+- Authenticated 16 × 16 Ranked gameplay with 40 mines, controlled by server-side Supabase functions
+- Server-verified winning-result recording and read-only fastest-times API
+- Direct client-submitted Ranked results and the older local JSON writer are disabled
+- Competitive rating points and rank tiers are not implemented yet. The verified leaderboard still needs end-to-end validation.
 
 ## Project Structure
 
@@ -108,12 +115,12 @@ The project is still under active development.
 
 Major remaining tasks include:
 
-- Recording and saving complete gameplay sessions
+- Durable, account-backed gameplay history (currently a limited browser-tab history)
 - Persistent database storage
 - Real player statistics and game history
-- Fully functional Ranked mode
+- Ranked ratings, placements, rank tiers, and an end-to-end verified leaderboard UI
 - Leaderboards and player progression
-- Automated testing and deployment
+- End-to-end browser tests, database deployment verification, and production monitoring
 
 ## Testing
 

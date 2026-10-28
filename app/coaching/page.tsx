@@ -5,7 +5,8 @@ import { Navbar } from "@/components/play/navbar";
 
 export const metadata = {
   title: "AI-Coach | Coaching",
-  description: "Send a finished Minesweeper game and get specific coaching feedback.",
+  description:
+    "Review a completed Practice game with evidence-based coaching and move replay.",
 };
 
 // The Coaching tab. `CoachConsole` does the interactive work; this page only
@@ -25,15 +26,17 @@ export default function CoachingPage() {
             <h1>
               Coaching<span className="title-period">.</span>
             </h1>
-            <p className="page-subtitle">Send a finished game, get specific feedback</p>
+            <p className="page-subtitle">
+              Review your Practice decisions with visible-board evidence
+            </p>
           </div>
 
           <div className="session-info" aria-label="Coaching API summary">
-            <span className="difficulty-label">Gameplay API</span>
+            <span className="difficulty-label">Post-game review</span>
             <div>
               <span>
                 <Bot size={14} aria-hidden="true" />
-                POST /api/coach
+                Verified replay
               </span>
               <span>
                 <Sparkles size={14} aria-hidden="true" />
@@ -46,8 +49,11 @@ export default function CoachingPage() {
         <CoachConsole />
 
         <footer className="page-footer">
-          <p>The rule engine always runs; an AI provider only rewrites the wording.</p>
-          <span>POST /api/coach</span>
+          <p>
+            Verified conclusions come from board logic. Optional AI can select a verified
+            focus.
+          </p>
+          <span>Practice review · AI optional</span>
         </footer>
       </main>
     </>

@@ -1,44 +1,43 @@
+import Link from "next/link";
 import { ArrowUpRight, Flag, MessageSquare, X } from "lucide-react";
 
 import { MineLogo } from "./mine-logo";
 
-// This is sample feedback, not analysis of the displayed board.
-// The `open` attribute shows the report on first load. Clicking the summary
-// closes it; CSS swaps the X for the message icon so it can be reopened.
+// This sidebar teaches the workflow; it does NOT claim to analyse the live board.
+// Personalized evidence is only available after a completed Practice game.
 export function CoachPreview() {
   return (
     <details className="coach-panel" open>
       <summary className="coach-toggle">
         <MineLogo className="coach-mine" />
-        <span className="coach-name">AI Coach</span>
-        <span className="sample-label">Sample report</span>
+        <span className="coach-name">Coaching guide</span>
+        <span className="sample-label">Example only</span>
         <span className="coach-toggle-icon" aria-hidden="true">
           <X className="close-icon" size={18} />
           <MessageSquare className="reopen-icon" size={18} />
         </span>
-        <span className="sr-only"> — show or hide post-game feedback</span>
+        <span className="sr-only"> — show or hide coaching instructions</span>
       </summary>
 
       <div className="coach-content">
         <div className="report-heading">
           <span className="report-marker" aria-hidden="true" />
-          <h2>POST-GAME FEEDBACK</h2>
+          <h2>HOW POST-GAME COACHING WORKS</h2>
         </div>
-
         <h3>
-          A good read.
+          Play first.
           <br />
-          One thing to work on.
+          Learn from your moves.
         </h3>
         <p className="coach-intro">
-          You recognised the 1–2–1 pattern and flagged both outer squares.
+          Finish a Practice game and select <strong>Review This Game</strong>. You'll get
+          verified moves, an interactive replay, and a short takeaway. AI is optional.
         </p>
 
-        {/* This small diagram explains the pattern used in the sample feedback. */}
         <div
           className="pattern-example"
           role="img"
-          aria-label="Pattern example: a row of 1, 2, 1 above a row containing a mine, a safe square, and a mine."
+          aria-label="Illustrative Minesweeper pattern: 1, 2, 1 above mine, safe square, mine. Not taken from your current game."
         >
           <div className="pattern-grid" aria-hidden="true">
             <span>1</span>
@@ -53,24 +52,22 @@ export function CoachPreview() {
             </span>
           </div>
           <div className="pattern-caption">
-            <strong>1–2–1 pattern</strong>
-            <span>Two mines. One safe square.</span>
+            <strong>Example: 1–2–1</strong>
+            <span>General lesson, not live game feedback</span>
           </div>
         </div>
-
         <p className="pattern-condition">
-          This example assumes the three numbers touch only these three covered squares,
-          with no other adjacent mines.
+          This deduction applies only when the three numbers are constrained by exactly
+          these three covered squares, with no other touching hidden mines.
         </p>
-
         <div className="next-step">
-          <span className="subtle-label">Next game</span>
-          <p>Before guessing, check the other edges for a safe move.</p>
+          <span className="subtle-label">After the game</span>
+          <p>Review the recorded evidence before deciding what to practice next.</p>
         </div>
-
         <div className="coach-footer">
-          <span>After the game, ask about a move.</span>
-          <ArrowUpRight size={16} aria-hidden="true" />
+          <Link href="/profile" className="coach-guide-link">
+            Review recent games <ArrowUpRight size={16} aria-hidden="true" />
+          </Link>
         </div>
       </div>
     </details>
