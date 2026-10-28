@@ -8,29 +8,13 @@ import type { User } from "@supabase/supabase-js";
 import { Gamepad2, MessageSquare, Settings2, UserRound } from "lucide-react";
 
 import { MineLogo } from "./mine-logo";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const navigationItems = [
-  {
-    label: "Play",
-    icon: Gamepad2,
-    route: "/",
-  },
-  {
-    label: "Profile",
-    icon: UserRound,
-    route: "/profile",
-  },
-  {
-    label: "Coaching",
-    icon: MessageSquare,
-    route: "/coaching",
-  },
-  {
-    label: "Settings",
-    icon: Settings2,
-    route: "/settings",
-  },
+  { label: "Play", icon: Gamepad2, route: "/" },
+  { label: "Profile", icon: UserRound, route: "/profile" },
+  { label: "Coaching", icon: MessageSquare, route: "/coaching" },
+  { label: "Settings", icon: Settings2, route: "/settings" },
 ];
 
 export function Navbar() {
@@ -39,25 +23,24 @@ export function Navbar() {
 
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [signOutError, setSignOutError] = useState("");
 
   useEffect(() => {
-    // Only connect when Supabase is configured.
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-    ) {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
       setLoadingUser(false);
       return;
     }
 
-    const supabase = createClient();
+    // Capture auth after the null check so TypeScript can safely use it
+    // inside loadUser, even though that async function runs later.
+    const auth = supabase.auth;
 
     async function loadUser() {
       try {
         const {
           data: { user },
-        } = await supabase.auth.getUser();
-
+        } = await auth.getUser();
         setUser(user);
       } catch {
         setUser(null);
@@ -66,12 +49,12 @@ export function Navbar() {
       }
     }
 
-    loadUser();
+    void loadUser();
 
     // Keep the navbar updated when a user signs in or out.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setLoadingUser(false);
     });
@@ -82,18 +65,25 @@ export function Navbar() {
   }, []);
 
   async function handleSignOut() {
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error("Sign out failed:", error.message);
+    setSignOutError("");
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setSignOutError("Sign-out is unavailable because Supabase is not configured.");
       return;
     }
 
-    setUser(null);
-    router.push("/");
-    router.refresh();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        setSignOutError("Could not sign out. Please try again.");
+        return;
+      }
+      setUser(null);
+      router.push("/");
+      router.refresh();
+    } catch {
+      setSignOutError("Could not sign out. Please try again.");
+    }
   }
 
   const username =
@@ -150,6 +140,7 @@ export function Navbar() {
               <button type="button" className="sign-out-button" onClick={handleSignOut}>
                 Sign Out
               </button>
+              {signOutError && <span role="alert">{signOutError}</span>}
             </>
           ) : !loadingUser ? (
             <Link

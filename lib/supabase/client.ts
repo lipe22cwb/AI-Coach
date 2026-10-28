@@ -5,29 +5,34 @@ let browserClient: SupabaseClient | null = null;
 
 export function isSupabaseConfigured() {
   return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+      (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()),
   );
 }
 
-/** Lazily create the shared browser client when Supabase is configured. */
-export function getSupabaseBrowserClient() {
+/** Return null rather than crashing when public Supabase settings are missing. */
+export function getSupabaseBrowserClient(): SupabaseClient | null {
   if (typeof window === "undefined" || !isSupabaseConfigured()) return null;
   if (browserClient) return browserClient;
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!key) return null;
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  if (!url || !key) return null;
 
-  browserClient = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key);
-  return browserClient;
+  try {
+    browserClient = createBrowserClient(url, key);
+    return browserClient;
+  } catch {
+    // Malformed setup should not crash the page or the sign-in form.
+    console.error("Supabase browser configuration is invalid.");
+    return null;
+  }
 }
 
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-  );
+/** Legacy helper: callers must handle null when Supabase is unavailable. */
+export function createClient(): SupabaseClient | null {
+  return getSupabaseBrowserClient();
 }

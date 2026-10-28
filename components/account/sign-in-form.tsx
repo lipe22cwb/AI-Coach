@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function SignInForm() {
   const router = useRouter();
@@ -34,9 +34,18 @@ export function SignInForm() {
     const password = String(form.get("password") ?? "");
     const username = String(form.get("username") ?? "").trim();
 
-    const supabase = createClient();
-
     try {
+      // Missing or malformed configuration must produce a friendly UI error,
+      // not an exception before the error handler begins.
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) {
+        setMessage(
+          "Accounts are unavailable because Supabase is not configured. Contact the project administrator.",
+        );
+        setIsError(true);
+        return;
+      }
+
       if (mode === "create") {
         if (username.length < 3) {
           setMessage("Username must be at least 3 characters long.");
