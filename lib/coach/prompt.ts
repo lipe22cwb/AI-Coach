@@ -1,3 +1,5 @@
+import { boardShapeOf } from "./board";
+import type { CoachPreferences } from "../settings/types";
 import type { CoachAnalysis, GameplaySession } from "./types";
 
 // Turns the deterministic analysis into a compact brief for an AI model.
@@ -20,6 +22,60 @@ export const COACH_SYSTEM_PROMPT = [
   "strengths: 2 to 4 items. improvements: 2 to 4 items. nextSteps: 2 to 3 items.",
 ].join("\n");
 
+const TONE_LINES: Record<CoachPreferences["coachingStyle"], string> = {
+  encouraging: "Warm and encouraging; celebrate effort without exaggerating.",
+  balanced: "Calm and balanced; honest about mistakes without being harsh.",
+  direct: "Direct and concise; skip praise padding and get to the point.",
+};
+
+const DETAIL_LINES: Record<CoachPreferences["explanationDetail"], string> = {
+  brief: "Keep it brief: at most 2 short bullets per section, one sentence each.",
+  standard: "Standard detail: 2 to 4 bullets per section, one sentence each.",
+  detailed:
+    "Detailed: up to 4 bullets per section and explain why each point matters in one extra sentence.",
+};
+
+const EXPERIENCE_LINES: Record<CoachPreferences["experienceLevel"], string> = {
+  new: "Assume a new player: explain any Minesweeper term the first time you use it.",
+  some: "Assume the player knows the basics but not advanced patterns.",
+  experienced:
+    "Assume an experienced player: use standard terms such as chord and forced guess without explanation.",
+};
+
+const COMPETITIVE_LINES: Record<CoachPreferences["competitiveness"], string> = {
+  relaxed: "Frame progress around learning and enjoyment, not rankings.",
+  balanced: "Frame progress around personal improvement and steady habits.",
+  competitive:
+    "Frame progress around speed and ranking, while still discouraging reckless guesses.",
+};
+
+/**
+ * The base instructions plus the player's saved Settings preferences. The
+ * preference block only shapes wording and emphasis; the factual brief below is
+ * still the only source of truth.
+ */
+export function buildCoachSystemPrompt(preferences?: CoachPreferences): string {
+  if (!preferences) return COACH_SYSTEM_PROMPT;
+  const goals = [...preferences.selectedGoals, preferences.customGoal.trim()].filter(
+    Boolean,
+  );
+  const lines = [
+    COACH_SYSTEM_PROMPT,
+    "",
+    "PLAYER PREFERENCES (wording only — never change facts, numbers or scores)",
+    `- Tone: ${TONE_LINES[preferences.coachingStyle]}`,
+    `- Explanation detail: ${DETAIL_LINES[preferences.explanationDetail]}`,
+    `- Experience: ${EXPERIENCE_LINES[preferences.experienceLevel]}`,
+    `- Competitive framing: ${COMPETITIVE_LINES[preferences.competitiveness]}`,
+  ];
+  if (goals.length > 0) {
+    lines.push(
+      `- Learning goals: ${goals.join(", ")}. Emphasise these when the facts support it.`,
+    );
+  }
+  return lines.join("\n");
+}
+
 /** The JSON shape we ask every provider to return. */
 export type CoachNarrative = {
   headline: string;
@@ -38,11 +94,15 @@ export function buildCoachPrompt(
   session: GameplaySession,
   analysis: CoachAnalysis,
 ): string {
+  const shape = boardShapeOf(session);
+  const boardLine = shape
+    ? `- Board: ${shape.rows} × ${shape.columns} with ${session.mineCount} mines`
+    : `- Board: unknown shape with ${session.mineCount} mines`;
   const lines: string[] = [
     "GAME FACTS",
     `- Game: ${session.game ?? "minesweeper"}`,
     `- Difficulty: ${session.difficulty ?? "unknown"}`,
-    `- Board: ${session.boardSize} × ${session.boardSize} with ${session.mineCount} mines`,
+    boardLine,
     `- Outcome: ${session.outcome}`,
     session.durationSeconds !== undefined
       ? `- Duration: ${session.durationSeconds} seconds`

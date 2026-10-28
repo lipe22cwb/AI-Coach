@@ -1,19 +1,30 @@
 "use client";
 
 import { Flag, Grid2X2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
+import { GameCoachReport } from "@/components/coach/game-coach-report";
 import { CoachPreview } from "@/components/play/coach-preview";
 import { CurrentFocus } from "@/components/play/current-focus";
 import { MinesweeperBoard } from "@/components/play/minesweeper-board";
 import { ModeSelector } from "@/components/play/mode-selector";
 import { Navbar } from "@/components/play/navbar";
+import { saveLastGame } from "@/lib/coach/last-game";
+import type { GameplaySession } from "@/lib/coach/types";
 import { DEFAULT_DIFFICULTY, DIFFICULTY_SETTINGS } from "@/lib/game-settings";
 import type { Difficulty } from "@/lib/game-settings";
 
 export default function Home() {
   const [difficulty, setDifficulty] = useState<Difficulty>(DEFAULT_DIFFICULTY);
+  const [lastGame, setLastGame] = useState<GameplaySession | null>(null);
   const settings = DIFFICULTY_SETTINGS[difficulty];
+
+  // Keep the report on this page and remember the game for the Coaching tab.
+  const handleGameComplete = useCallback((session: GameplaySession) => {
+    setLastGame(session);
+    saveLastGame(session);
+  }, []);
+  const handleGameStart = useCallback(() => setLastGame(null), []);
 
   return (
     <>
@@ -55,7 +66,10 @@ export default function Home() {
             id="difficulty-select"
             className="difficulty-select"
             value={difficulty}
-            onChange={(event) => setDifficulty(event.target.value as Difficulty)}
+            onChange={(event) => {
+              setDifficulty(event.target.value as Difficulty);
+              setLastGame(null);
+            }}
           >
             <option value="beginner">Beginner — 9 × 9, 10 mines</option>
             <option value="intermediate">Intermediate — 16 × 16, 40 mines</option>
@@ -70,12 +84,19 @@ export default function Home() {
         </div>
 
         <div className="play-layout">
-          <MinesweeperBoard key={difficulty} settings={settings} />
+          <MinesweeperBoard
+            key={difficulty}
+            settings={settings}
+            onGameComplete={handleGameComplete}
+            onGameStart={handleGameStart}
+          />
           <aside className="coach-sidebar" aria-label="Coaching tools">
             <CurrentFocus />
             <CoachPreview />
           </aside>
         </div>
+
+        {lastGame ? <GameCoachReport session={lastGame} /> : null}
 
         <footer className="page-footer">
           <p>Practice with feedback. Play ranked without live coaching.</p>

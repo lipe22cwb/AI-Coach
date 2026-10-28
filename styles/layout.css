@@ -93,6 +93,13 @@ h1 {
 .mode-button.selected:hover {
   background: #c42b39;
 }
+.mode-button.active {
+  background: #b62634;
+  color: #fff;
+}
+.mode-button.active:hover {
+  background: #c42b39;
+}
 .mode-button.ranked {
   background: #202020;
   color: #eee;
@@ -102,6 +109,17 @@ h1 {
 }
 .mode-button.ranked:hover {
   background: #2a2a2a;
+}
+.mode-button.pause-button {
+  background: #202020;
+  color: #eee;
+}
+.mode-button.pause-button:hover {
+  background: #2a2a2a;
+}
+.mode-button.pause-button[aria-pressed="true"] {
+  background: #b62634;
+  color: #fff;
 }
 
 /* Let the game take the remaining width while the coach stays readable.

@@ -1,3 +1,11 @@
+import {
+  boardShapeOf,
+  colOf,
+  indexOf,
+  neighboursOf,
+  openingCellOf,
+  rowOf,
+} from "./board";
 import type {
   CoachAnalysis,
   CoachGrade,
@@ -19,31 +27,6 @@ import type {
 function positionLabel(row: number, col: number): string {
   // People count from 1; the data counts from 0.
   return `row ${row + 1}, column ${col + 1}`;
-}
-
-/** Indices of the up-to-eight squares around `index` on a square board. */
-function neighbours(index: number, size: number): number[] {
-  const row = Math.floor(index / size);
-  const col = index % size;
-  const out: number[] = [];
-  for (let dr = -1; dr <= 1; dr += 1) {
-    for (let dc = -1; dc <= 1; dc += 1) {
-      if (dr === 0 && dc === 0) continue;
-      const r = row + dr;
-      const c = col + dc;
-      if (r < 0 || c < 0 || r >= size || c >= size) continue;
-      out.push(r * size + c);
-    }
-  }
-  return out;
-}
-
-function classifyOpening(row: number, col: number, size: number): OpeningCell {
-  const onVerticalEdge = row === 0 || row === size - 1;
-  const onHorizontalEdge = col === 0 || col === size - 1;
-  if (onVerticalEdge && onHorizontalEdge) return "corner";
-  if (onVerticalEdge || onHorizontalEdge) return "edge";
-  return "center";
 }
 
 function gradeFor(score: number): CoachGrade {
@@ -75,13 +58,18 @@ type GuessRecord = {
 /**
  * Replays one game and produces the deterministic coaching analysis.
  *
+ * Boards can be rectangular (Expert is 16×30), so every index calculation uses
+ * the real row and column counts.
+ *
  * When `mines` is missing the engine still counts moves, flags and the opening
  * click, but it cannot judge decisions. It says so in `notes` instead of
  * pretending to know more than it does.
  */
 export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
-  const size = Math.max(2, Math.floor(session.boardSize));
-  const total = size * size;
+  const shape = boardShapeOf(session);
+  const rows = shape?.rows ?? 9;
+  const columns = shape?.columns ?? 9;
+  const total = rows * columns;
   const moves = session.moves ?? [];
   const hasMines = Array.isArray(session.mines) && session.mines.length > 0;
   const mineSet = new Set(
@@ -93,6 +81,9 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
       ? "The coach replayed the board from the recorded mine layout."
       : "No mine layout was sent, so the coach could not replay individual decisions.",
   ];
+  if (!shape) {
+    notes.push("The board dimensions were missing, so the coach assumed a 9 × 9 board.");
+  }
   if (moves.length === 0) {
     notes.push("No moves were recorded for this game.");
   }
@@ -103,9 +94,13 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
   }));
   const number = new Array<number>(total).fill(-1);
 
+  function neighbours(index: number): number[] {
+    return neighboursOf(index, rows, columns);
+  }
+
   function minesAround(index: number): number {
     let count = 0;
-    for (const near of neighbours(index, size)) {
+    for (const near of neighbours(index)) {
       if (mineSet.has(near)) count += 1;
     }
     return count;
@@ -125,7 +120,7 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
       const count = minesAround(current);
       number[current] = count;
       if (count === 0) {
-        for (const near of neighbours(current, size)) {
+        for (const near of neighbours(current)) {
           if (!cells[near].revealed && !cells[near].flagged) stack.push(near);
         }
       }
@@ -136,28 +131,131 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
   // The single-point rule every Minesweeper coach teaches: a number with as
   // many flags around it as its value proves its other covered neighbours are
   // safe; a number with no flags left to place proves they are mines.
-  function deduce(): { safe: Set<number>; mines: Set<number> } {
-    const safe = new Set<number>();
-    const mines = new Set<number>();
+  //
+  // On top of that, overlapping constraints are compared: when one number's
+  // unknown squares are a subset of another's, the difference between their
+  // mine counts decides the extra squares. That generalises patterns such as
+  // 1–2–1 and 1–2–2–1, which single-point logic alone cannot solve.
+  //
+  // The rules only hold while the flags around a number are correct. A wrong
+  // flag makes the number lie, so the engine refuses to draw any conclusion
+  // from a number that carries one. That keeps every "provably safe" claim
+  // supported by what the player could actually know.
+
+  type Constraint = { cells: number[]; mines: number };
+
+  function buildConstraints(
+    knownMines: Set<number>,
+    knownSafe: Set<number>,
+  ): { constraints: Constraint[]; wrongFlagNumbers: number } {
+    const constraints: Constraint[] = [];
+    let wrongFlagNumbers = 0;
     for (let index = 0; index < total; index += 1) {
       if (!cells[index].revealed) continue;
       const value = number[index];
       if (value <= 0) continue;
+
+      let flagged = 0;
+      let hasWrongFlag = false;
       const hidden: number[] = [];
-      let flags = 0;
-      for (const near of neighbours(index, size)) {
-        if (cells[near].flagged) flags += 1;
-        else if (!cells[near].revealed) hidden.push(near);
+      for (const near of neighbours(index)) {
+        if (cells[near].flagged) {
+          flagged += 1;
+          if (!mineSet.has(near)) hasWrongFlag = true;
+        } else if (!cells[near].revealed) {
+          hidden.push(near);
+        }
       }
-      if (hidden.length === 0) continue;
-      const remaining = value - flags;
-      if (remaining === hidden.length) {
-        for (const square of hidden) mines.add(square);
-      } else if (remaining === 0) {
-        for (const square of hidden) safe.add(square);
+      if (hasWrongFlag) {
+        wrongFlagNumbers += 1;
+        continue;
+      }
+
+      let known = 0;
+      const candidates: number[] = [];
+      for (const square of hidden) {
+        if (knownMines.has(square)) known += 1;
+        else if (!knownSafe.has(square)) candidates.push(square);
+      }
+      if (candidates.length === 0) continue;
+
+      const remaining = value - flagged - known;
+      if (remaining < 0 || remaining > candidates.length) continue;
+      constraints.push({ cells: candidates, mines: remaining });
+    }
+    return { constraints, wrongFlagNumbers };
+  }
+
+  function deduce(): {
+    safe: Set<number>;
+    mines: Set<number>;
+    advanced: boolean;
+    wrongFlagNumbers: number;
+  } {
+    const safe = new Set<number>();
+    const mines = new Set<number>();
+    let advanced = false;
+    let wrongFlagNumbers = 0;
+    let rounds = 0;
+    let changed = true;
+
+    const addSafe = (square: number) => {
+      if (!safe.has(square)) {
+        safe.add(square);
+        changed = true;
+      }
+    };
+    const addMine = (square: number) => {
+      if (!mines.has(square)) {
+        mines.add(square);
+        changed = true;
+      }
+    };
+
+    while (changed && rounds < 8) {
+      changed = false;
+      rounds += 1;
+      const built = buildConstraints(mines, safe);
+      wrongFlagNumbers = Math.max(wrongFlagNumbers, built.wrongFlagNumbers);
+      const constraints = built.constraints;
+
+      for (const constraint of constraints) {
+        if (constraint.mines === 0) {
+          for (const square of constraint.cells) addSafe(square);
+        } else if (constraint.mines === constraint.cells.length) {
+          for (const square of constraint.cells) addMine(square);
+        }
+      }
+      // Recompute before trying the more expensive comparison: single-point
+      // facts usually collapse the frontier first.
+      if (changed || constraints.length > 250) continue;
+
+      outer: for (let i = 0; i < constraints.length; i += 1) {
+        for (let j = 0; j < constraints.length; j += 1) {
+          if (i === j) continue;
+          const small = constraints[i];
+          const big = constraints[j];
+          if (small.cells.length >= big.cells.length) continue;
+          const smallCells = new Set(small.cells);
+          if (!small.cells.every((square) => big.cells.includes(square))) continue;
+
+          const difference = big.cells.filter((square) => !smallCells.has(square));
+          const remaining = big.mines - small.mines;
+          if (remaining < 0 || remaining > difference.length) continue;
+          if (remaining === 0) {
+            for (const square of difference) addSafe(square);
+          } else if (remaining === difference.length) {
+            for (const square of difference) addMine(square);
+          }
+          if (changed) {
+            advanced = true;
+            break outer;
+          }
+        }
       }
     }
-    return { safe, mines };
+
+    return { safe, mines, advanced, wrongFlagNumbers };
   }
 
   const counts = {
@@ -177,18 +275,28 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
   let fatal: FatalMove | null = null;
   let firstAvoidableGuess: GuessRecord | null = null;
   let firstLogicMove: GuessRecord | null = null;
+  let usedAdvancedDeduction = false;
+  let sawWrongFlagNumber = false;
 
   for (let position = 0; position < moves.length; position += 1) {
     const move = moves[position];
     const moveNumber = position + 1;
     const row = Math.floor(move.row);
     const col = Math.floor(move.col);
-    const index = row * size + col;
-    if (row < 0 || col < 0 || index < 0 || index >= total) continue;
+    if (row < 0 || col < 0 || row >= rows || col >= columns) continue;
+    const index = indexOf(row, col, columns);
 
-    const { safe, mines } = hasMines
+    const deduction = hasMines
       ? deduce()
-      : { safe: new Set<number>(), mines: new Set<number>() };
+      : {
+          safe: new Set<number>(),
+          mines: new Set<number>(),
+          advanced: false,
+          wrongFlagNumbers: 0,
+        };
+    const { safe, mines } = deduction;
+    if (deduction.advanced) usedAdvancedDeduction = true;
+    if (deduction.wrongFlagNumbers > 0) sawWrongFlagNumber = true;
 
     if (move.action === "flag") {
       counts.flags += 1;
@@ -208,13 +316,24 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
     }
 
     if (move.action === "chord") {
+      // A chord only fires on a revealed number whose neighbouring flag count
+      // equals its value. Anything else is ignored by the real board, so the
+      // replay ignores it too instead of opening squares the player never saw.
+      const target = cells[index];
+      const value = number[index];
+      if (!target.revealed || value <= 0) continue;
+      const adjacent = neighbours(index);
+      const adjacentFlags = adjacent.filter((near) => cells[near].flagged).length;
+      if (adjacentFlags !== value) continue;
+
       counts.chords += 1;
       if (!hasMines) continue;
-      const targets = neighbours(index, size).filter(
+
+      const targets = adjacent.filter(
         (near) => !cells[near].revealed && !cells[near].flagged,
       );
-      const risky = targets.some((target) => mineSet.has(target));
-      if (risky) {
+      const allProvablySafe = targets.every((square) => safe.has(square));
+      if (!allProvablySafe) {
         counts.guesses += 1;
         if (safe.size > 0) {
           counts.avoidableGuesses += 1;
@@ -225,13 +344,13 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
       } else {
         counts.logicalReveals += 1;
       }
-      for (const target of targets) {
-        const hit = revealSquare(target);
+      for (const square of targets) {
+        const hit = revealSquare(square);
         if (hit && !fatal) {
           fatal = {
             moveNumber,
-            row: Math.floor(target / size),
-            col: target % size,
+            row: rowOf(square, columns),
+            col: colOf(square, columns),
             avoidable: safe.size > 0,
             safeAvailable: safe.size,
           };
@@ -244,7 +363,7 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
     counts.reveals += 1;
     if (!sawOpening) {
       sawOpening = true;
-      opening = classifyOpening(row, col, size);
+      opening = openingCellOf(row, col, rows, columns);
     }
 
     if (hasMines) {
@@ -278,6 +397,13 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
     }
   }
 
+  // How much of the board the player actually cleared. Losses are scored by
+  // progress: dying after nine squares is not the same game as dying with the
+  // board almost solved.
+  const totalSafe = total - mineSet.size;
+  const revealedSafe = cells.reduce((count, cell) => count + (cell.revealed ? 1 : 0), 0);
+  const progress = totalSafe > 0 ? Math.min(1, revealedSafe / totalSafe) : 0;
+
   const metrics: CoachMetrics | null = hasMines
     ? {
         totalMoves: moves.length,
@@ -287,6 +413,7 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
         logicalReveals: counts.logicalReveals,
         guesses: counts.guesses,
         avoidableGuesses: counts.avoidableGuesses,
+        forcedGuesses: Math.max(0, counts.guesses - counts.avoidableGuesses),
         guessRate:
           counts.reveals > 0
             ? Math.round((counts.guesses / counts.reveals) * 100) / 100
@@ -298,26 +425,61 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
             ? Math.round(
                 (counts.correctFlags / (counts.correctFlags + counts.wrongFlags)) * 100,
               ) / 100
-            : 1,
+            : null,
         openingCell: opening,
       }
     : null;
 
-  // Scores start at 100 and lose points for avoidable mistakes. A loss is not a
-  // disaster by itself; a loss the board warned you about costs the most.
+  // How much the coach could actually prove, stated in plain language. The
+  // report shows these notes so a partial read is never mistaken for certainty.
+  if (hasMines) {
+    if (usedAdvancedDeduction) {
+      notes.push(
+        "Some squares were proven with overlapping number constraints (patterns such as 1–2–1), not just single numbers.",
+      );
+    }
+    if (sawWrongFlagNumber) {
+      notes.push(
+        "Numbers next to a wrong flag were ignored: a wrong flag makes a number lie.",
+      );
+    }
+    if (metrics && metrics.forcedGuesses > 0) {
+      notes.push(
+        `${metrics.forcedGuesses} guess${metrics.forcedGuesses > 1 ? "es were" : " was"} forced — the numbers left no provably safe square at that point.`,
+      );
+    }
+    if (metrics && metrics.avoidableGuesses > 0) {
+      notes.push(
+        `${metrics.avoidableGuesses} guess${metrics.avoidableGuesses > 1 ? "es could" : " could"} have been avoided because a provably safe square was still available.`,
+      );
+    }
+    if (session.outcome === "loss" && totalSafe > 0) {
+      notes.push(
+        `You cleared ${revealedSafe} of ${totalSafe} safe squares (${Math.round(progress * 100)}%) before the game ended.`,
+      );
+    }
+  }
+
+  // Scores start at 100 and lose points for avoidable mistakes. A win is judged
+  // by how clean it was; a loss is judged mainly by how far the player got,
+  // because dying after a handful of squares is not the same performance as
+  // dying with most of the board solved.
   let score: number;
   if (!hasMines) {
     score = session.outcome === "win" ? 80 : session.outcome === "loss" ? 55 : 65;
+  } else if (session.outcome === "loss") {
+    // 35 at an empty board, up to 90 with almost every safe square cleared.
+    score = 35 + Math.round(progress * 55);
+    if (fatal && fatal.avoidable) score -= 12;
+    const avoidable = counts.avoidableGuesses - (fatal && fatal.avoidable ? 1 : 0);
+    score -= Math.min(18, Math.max(0, avoidable) * 3);
+    score -= Math.min(16, counts.wrongFlags * 4);
+    if (counts.revealsOnKnownMine > 0) score -= 6;
+    score = Math.max(0, Math.min(100, Math.round(score)));
   } else {
     score = 100;
-    if (session.outcome === "loss") {
-      score -= 18;
-      if (fatal && fatal.avoidable) score -= 22;
-    } else if (session.outcome === "win") {
-      score += 6;
-    }
-    const avoidable = counts.avoidableGuesses - (fatal && fatal.avoidable ? 1 : 0);
-    score -= Math.min(24, Math.max(0, avoidable) * 3);
+    if (session.outcome === "win") score += 6;
+    score -= Math.min(24, Math.max(0, counts.avoidableGuesses) * 3);
     score -= Math.min(16, counts.wrongFlags * 4);
     if (counts.revealsOnKnownMine > 0) score -= 6;
     score = Math.max(0, Math.min(100, Math.round(score)));
@@ -474,7 +636,8 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
   if (!hasMines) {
     summary = `The game lasted ${moves.length} recorded moves${session.durationSeconds ? ` in ${session.durationSeconds} seconds` : ""}. Add the mine layout to unlock decision-by-decision feedback.`;
   } else if (fatal && fatal.avoidable) {
-    summary = `You were solving the board well, but move ${fatal.moveNumber} ignored ${fatal.safeAvailable} safe square${fatal.safeAvailable > 1 ? "s" : ""} and hit a mine. The rest of the read was sound.`;
+    const cleared = Math.round(progress * 100);
+    summary = `You cleared ${cleared}% of the safe squares before move ${fatal.moveNumber} hit a mine, even though ${fatal.safeAvailable} provably safe square${fatal.safeAvailable > 1 ? "s were" : " was"} still available.`;
   } else if (fatal) {
     summary = `You ran out of certain moves and the final guess cost you the game. That ending was out of your hands.`;
   } else if (session.outcome === "win") {
@@ -515,5 +678,6 @@ export function toRuleReport(analysis: CoachAnalysis): CoachReport {
     metrics: analysis.metrics,
     source: "rules",
     model: null,
+    notes: analysis.notes,
   };
 }

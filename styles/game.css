@@ -110,6 +110,14 @@
 .cell.revealed {
   background: #1c1c1c;
 }
+/* Only the mine that ended the game is marked as exploded. */
+.cell.mine-exploded {
+  background: #7a1f26;
+  box-shadow: inset 0 0 0 2px #ff626c;
+}
+.cell.mine-exploded svg {
+  color: #ff626c;
+}
 .cell.flagged {
   background: #3c2024;
   box-shadow:

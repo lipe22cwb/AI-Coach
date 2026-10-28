@@ -288,6 +288,35 @@
   gap: 10px;
   margin: 18px 0;
 }
+.coach-actions-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.coach-last-game {
+  margin: 18px 0;
+  padding: 14px;
+  background: #101010;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.coach-last-meta {
+  margin: 7px 0 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.coach-last-game .coach-btn {
+  width: 100%;
+}
+.coach-last-empty {
+  margin: 18px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .coach-btn {
   display: inline-flex;
   align-items: center;
@@ -302,6 +331,14 @@
 }
 .coach-btn:hover:not(:disabled) {
   background: #c42b39;
+}
+.coach-btn.secondary {
+  background: #202020;
+  color: #eee;
+  border: 1px solid var(--line);
+}
+.coach-btn.secondary:hover:not(:disabled) {
+  background: #2a2a2a;
 }
 .coach-btn:disabled {
   opacity: 0.6;
@@ -357,6 +394,10 @@
 .coach-placeholder p {
   margin: 0;
   font-size: 14px;
+}
+.coach-placeholder-error svg,
+.coach-placeholder-error p {
+  color: #ff9aa1;
 }
 
 .coach-report-panel {
@@ -504,5 +545,33 @@
 .coach-next li {
   margin-bottom: 7px;
   font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Report rendered under the board as soon as a real game ends. */
+.game-coach-report {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+.coach-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.coach-notes {
+  margin-top: 18px;
+}
+.coach-notes ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.coach-notes li {
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
   line-height: 1.6;
 }
