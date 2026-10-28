@@ -8,11 +8,11 @@ needed.
 
 ## Interface inventory and current status
 
-| Interface                       | Direction                                                     | Current status                                                                                                         |
-| ------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Settings preferences repository | Settings UI ↔ persistence adapter                            | Local adapter works; account adapter awaits integration                                                                |
-| AI Coach API                    | Coaching client → `/api/coach` → AI provider / rules fallback | Present on `origin/Luiz-Branch` (`71c2d2f`); not merged into this branch; coaching personality is not configurable yet |
-| Ranked results API              | Game client → this app's API → prototype file store           | Implemented as a local prototype                                                                                       |
+| Interface                       | Direction                                                     | Current status                                                                              |
+| ------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Settings preferences repository | Settings UI ↔ persistence adapter                            | Local adapter works; account adapter awaits integration                                     |
+| AI Coach API                    | Coaching client → `/api/coach` → AI provider / rules fallback | Merged into `master`; rectangular boards (up to 16 × 30) and coaching preferences supported |
+| Ranked results API              | Game client → this app's API → prototype file store           | Implemented as a local prototype                                                            |
 
 ## Settings preferences repository
 
@@ -188,54 +188,69 @@ The current implementation stores results in `data/ranked-results.json`; it is
 a single-process local prototype and does not verify player identity or game
 replays. Do not treat `playerName` as an authenticated account identity.
 
-## AI Coach API — branch review
+## AI Coach API
 
-### Reviewed implementation
+### Implementation
 
-Reviewed `origin/Luiz-Branch` at commit `71c2d2f` (`Keep the coaching work log
-local only`). This API exists on that branch and is not present in the current
-working branch until the branches are merged.
+`POST /api/coach` accepts one `GameplaySession`: board dimensions (`rows` and
+`columns`, or the legacy square `boardSize`), mine count, outcome, moves, and
+optional game, difficulty, mine layout, duration and `preferences`. The server
+validates the request (`lib/coach/validate.ts`), replays the game
+(`lib/coach/analyze.ts`) and returns a `CoachResult`. The full request and
+response schema lives in [COACH-API.md](COACH-API.md).
 
-The branch exposes `POST /api/coach`. Its request currently accepts one
-`GameplaySession`: board size, mine count, outcome, moves, and optional game,
-difficulty, mine layout, and duration. The server validates and analyzes that
-game, then returns a `CoachResult` containing the report and fallback reason.
-See `docs/COACH-API.md` on the source branch for its full request/response schema.
+Boards are rectangular. Expert is 16 rows × 30 columns, so `rows` and `columns`
+are the canonical fields; `boardSize` remains square-board shorthand and may not
+contradict them.
 
 ### Coaching personality compatibility
 
-**Current result: not supported yet.** The Coach API request has no
-`preferences` field, and `parseSession()` in `app/api/coach/route.ts`
-reconstructs the accepted fields, so coaching preferences sent today would be
-discarded.
-`lib/coach/prompt.ts` also hard-codes an encouraging voice in
-`COACH_SYSTEM_PROMPT`. Therefore, the existing endpoint cannot honor the
-Settings choices for tone, explanation detail, experience, goals, or
-competitiveness.
+**Supported.** `preferences` is optional and validated against the shared
+`CoachPreferences` shape. The fields shape the AI system prompt
+(`lib/coach/prompt.ts`) and, for `explanationDetail: "brief"`, the number of
+bullets in the rule report. They never change deterministic analysis, score,
+metrics, game facts, mistake classification or report evidence.
 
-### Suggested API extension
+Missing fields fall back to the Settings defaults. Invalid enum values return
+`400` rather than being silently accepted.
 
-When connecting Settings to the AI report flow, add an optional, validated
-`preferences` object to the Coach API request. Reuse the shared `CoachPreferences`
-shape:
+### Validation and limits
 
-```ts
-type CoachRequest = GameplaySession & {
-  preferences?: CoachPreferences; // Omitted fields use documented defaults.
-};
-```
+- `mines`, when present, must contain exactly `mineCount` unique in-range
+  indices, so a report is never built on a layout that contradicts its count.
+- Moves must be inside the board, at most 5000, and `atMs` timestamps may not go
+  backwards.
+- Bodies are limited to 100 KB; POST is limited to 30 requests per minute per
+  client; an optional `COACH_API_TOKEN` adds a shared-secret gate.
+- A deduction is only drawn from a number whose adjacent flags are all correct,
+  so a wrong flag can never make the coach call a square provably safe.
+- A chord only fires on a revealed number whose neighbouring flag count equals
+  its value, matching the playable board.
+- Overlapping number constraints (patterns such as 1–2–1) are compared in
+  addition to single-point rules, so more squares are proven without guessing.
+- `metrics.forcedGuesses` and `metrics.avoidableGuesses` add up to
+  `metrics.guesses`; `report.notes` states what was proven and what was not.
 
-Validate the preference enums and normalize missing fields to the Settings
-defaults. The AI prompt should use preferences to adjust wording and emphasis
-only. They must not change deterministic analysis, score, metrics, game facts,
-mistake classification, or report evidence. The response can retain the
-existing `CoachResult` shape; preferences do not need to be echoed unless
-needed for diagnostics. Invalid enum values should produce `400` rather than
-being silently accepted.
+### Real games from the Play page
 
-This is a proposed integration contract, not an implemented feature. Confirm
-the optional field and default when the source branch is integrated. The Coach API should receive the saved preference from the Coaching
-client; account identity and preference persistence remain separate concerns.
+The Play page now sends real completed games. `MinesweeperBoard` records every
+action with an `atMs` timestamp and keeps the generated mine layout, then emits
+one `GameplaySession` through its `onGameComplete` prop when the game ends.
+`app/page.tsx` renders `GameCoachReport` under the board, which posts the session
+to `/api/coach` automatically and shows the report. Nothing else in the app needs
+to build a session by hand; the Coaching tab keeps its two demo games.
+
+### Integration checks
+
+1. A rectangular Expert (16 × 30) game returns a report with metrics.
+2. A legacy square payload (`boardSize`) is still accepted.
+3. `mines` that do not match `mineCount` return `400`.
+4. An invalid preference value returns `400`.
+5. `explanationDetail: "brief"` shortens each bullet list to two items.
+6. A chord with a mismatched flag count is ignored, and wrong flags never
+   produce a "provably safe" claim.
+7. A 1–2–1 board proves extra squares through overlapping constraints.
+8. A finished game on the Play page renders a report without any manual step.
 
 ## Adding or changing an interface
 

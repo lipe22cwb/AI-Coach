@@ -4,6 +4,8 @@
 // This file has no framework imports on purpose. The exact same code runs in
 // the API route, in a future test script and in the browser fallback.
 
+import type { CoachPreferences } from "../settings/types";
+
 export type MoveAction = "reveal" | "flag" | "unflag" | "chord";
 
 /** One action the player took, in the order they took it. */
@@ -30,8 +32,16 @@ export type GameplaySession = {
   /** Lets the API grow to other games later. Defaults to "minesweeper". */
   game?: string;
   difficulty?: string;
-  /** The board is square: boardSize × boardSize squares. */
-  boardSize: number;
+  /**
+   * Legacy square-board shorthand: the board is `boardSize` × `boardSize`.
+   * Prefer `rows` + `columns`, which also cover rectangular boards such as
+   * Expert (16 × 30). When both are sent they must agree.
+   */
+  boardSize?: number;
+  /** Number of rows (height). Required unless `boardSize` is sent. */
+  rows?: number;
+  /** Number of columns (width). Required unless `boardSize` is sent. */
+  columns?: number;
   mineCount: number;
   outcome: GameplayOutcome;
   durationSeconds?: number;
@@ -42,6 +52,11 @@ export type GameplaySession = {
    */
   mines?: number[];
   moves: GameplayMove[];
+  /**
+   * Optional saved Settings coaching preferences. They change wording and
+   * emphasis only; the score, metrics and game facts stay deterministic.
+   */
+  preferences?: CoachPreferences;
 };
 
 export type CoachGrade = "S" | "A" | "B" | "C" | "D";
@@ -62,12 +77,17 @@ export type CoachMetrics = {
   guesses: number;
   /** Guesses made while a provably safe square was still available. */
   avoidableGuesses: number;
+  /** Guesses made when no provably safe square was left — no choice existed. */
+  forcedGuesses: number;
   /** Guesses ÷ reveals, rounded to two decimals. */
   guessRate: number;
   correctFlags: number;
   wrongFlags: number;
-  /** Correct flags ÷ flags placed, rounded to two decimals. */
-  flagAccuracy: number;
+  /**
+   * Correct flags ÷ flags placed, rounded to two decimals. `null` when the
+   * player placed no flags at all, so "no flags" is never reported as 100%.
+   */
+  flagAccuracy: number | null;
   openingCell: OpeningCell;
 };
 
@@ -92,6 +112,11 @@ export type CoachReport = {
   source: CoachSource;
   /** Provider model name when an AI provider wrote the narrative; null for rules. */
   model: string | null;
+  /**
+   * Plain-language notes about what the coach could and could not prove, shown
+   * with the report so a partial read is never presented as certainty.
+   */
+  notes: string[];
 };
 
 /** What the deterministic rule engine produces for one session. */

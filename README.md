@@ -45,13 +45,18 @@ Authentication requires a configured Supabase project.
 
 ### AI Coaching
 
-- Dedicated Coaching page
+- Dedicated Coaching page with recorded sample games
+- "Analyze my last game" action backed by browser storage
+- Automatic post-game analysis under the board after every real game
 - Game analysis using a rule-based engine
 - Optional AI-generated explanations through an external provider
 - Reports highlighting gameplay decisions and improvements
 - Coaching API at `/api/coach`
 
-The Coaching page currently uses sample sessions rather than completed games from the live board.
+The Coaching page keeps two recorded sample sessions so the analyser can be tried
+without playing. Finished games from the Play page are sent to the same API
+automatically and their report appears under the board. The API accepts real
+games on any board up to 16 × 30 (Expert).
 
 ### Settings
 
@@ -60,7 +65,8 @@ The Coaching page currently uses sample sessions rather than completed games fro
 - Personal improvement goals
 - Local browser storage for preferences
 
-Settings are not yet fully connected to user accounts or coaching responses.
+Coaching preferences are sent to `/api/coach` and shape the wording of a report.
+Account-backed persistence still depends on the configured Supabase project.
 
 ### Ranked System
 
@@ -103,7 +109,6 @@ The project is still under active development.
 Major remaining tasks include:
 
 - Recording and saving complete gameplay sessions
-- Connecting live gameplay to AI coaching
 - Persistent database storage
 - Real player statistics and game history
 - Fully functional Ranked mode

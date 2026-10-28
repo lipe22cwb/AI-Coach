@@ -1,5 +1,6 @@
 import { analyzeGameplay, toRuleReport } from "./analyze";
-import { buildCoachPrompt, COACH_SYSTEM_PROMPT } from "./prompt";
+import { normalizeCoachPreferences, shapeReportForPreferences } from "./preferences";
+import { buildCoachPrompt, buildCoachSystemPrompt } from "./prompt";
 import { getConfiguredProvider, requestNarrative } from "./providers";
 import type { CoachResult, GameplaySession } from "./types";
 
@@ -12,8 +13,9 @@ import type { CoachResult, GameplaySession } from "./types";
 // and no cost — the AI layer only makes the same advice read better.
 
 export async function coachGameplay(session: GameplaySession): Promise<CoachResult> {
+  const preferences = normalizeCoachPreferences(session.preferences);
   const analysis = analyzeGameplay(session);
-  const localReport = toRuleReport(analysis);
+  const localReport = shapeReportForPreferences(toRuleReport(analysis), preferences);
 
   const provider = getConfiguredProvider();
   if (!provider) {
@@ -27,7 +29,7 @@ export async function coachGameplay(session: GameplaySession): Promise<CoachResu
   try {
     const narrative = await requestNarrative(
       provider,
-      COACH_SYSTEM_PROMPT,
+      buildCoachSystemPrompt(preferences),
       buildCoachPrompt(session, analysis),
     );
     if (!narrative) {

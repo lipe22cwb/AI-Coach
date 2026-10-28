@@ -24,9 +24,15 @@ function metricItems(report: CoachReport) {
       label: "Guesses",
       value: `${metrics.guesses}${metrics.avoidableGuesses > 0 ? ` (${metrics.avoidableGuesses} avoidable)` : ""}`,
     },
+    { label: "Forced guesses", value: String(metrics.forcedGuesses) },
     {
       label: "Flag accuracy",
-      value: `${Math.round(metrics.flagAccuracy * 100)}%`,
+      // No flags placed means there is no accuracy to report. Showing 100%
+      // would reward not flagging at all.
+      value:
+        metrics.flagAccuracy === null
+          ? "No flags"
+          : `${Math.round(metrics.flagAccuracy * 100)}%`,
     },
     { label: "Chords", value: String(metrics.chords) },
     {
@@ -86,6 +92,17 @@ export function CoachReportView({
             </div>
           ))}
         </dl>
+      ) : null}
+
+      {report.notes.length > 0 ? (
+        <div className="coach-notes">
+          <span className="subtle-label">How this was analysed</span>
+          <ul>
+            {report.notes.map((note, index) => (
+              <li key={index}>{note}</li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {report.keyMoment ? (

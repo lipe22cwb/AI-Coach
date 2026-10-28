@@ -1,17 +1,32 @@
 "use client";
 
-import { Bomb, Flag, FlagTriangleRight, Grid2X2, MousePointer2 } from "lucide-react";
+import {
+  Bomb,
+  Flag,
+  FlagTriangleRight,
+  Grid2X2,
+  MousePointer2,
+  Pause,
+  Play,
+} from "lucide-react";
 import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { DifficultySettings } from "@/lib/game-settings";
+import type { GameplayMove, GameplaySession } from "@/lib/coach/types";
 import type { GameCell } from "./board-fixture";
 import { GameStats } from "./game-stats";
 
 type GameStatus = "ready" | "playing" | "won" | "lost";
 type InputMode = "reveal" | "flag";
 type Position = [number, number];
-type MinesweeperBoardProps = { settings: DifficultySettings };
+type MinesweeperBoardProps = {
+  settings: DifficultySettings;
+  /** Called once when a game ends, with everything the coach needs to replay it. */
+  onGameComplete?: (session: GameplaySession) => void;
+  /** Called when a fresh game starts, so the previous report can be cleared. */
+  onGameStart?: () => void;
+};
 
 const numberClasses: Record<number, string> = {
   1: "number-one",
@@ -153,7 +168,11 @@ function revealArea(
   }
 }
 
-export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
+export function MinesweeperBoard({
+  settings,
+  onGameComplete,
+  onGameStart,
+}: MinesweeperBoardProps) {
   const { rows, columns, mines } = settings;
   const [board, setBoard] = useState<GameCell[][]>(() => emptyBoard(rows, columns));
   const [status, setStatus] = useState<GameStatus>("ready");
@@ -161,7 +180,22 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [inputMode, setInputMode] = useState<InputMode>("reveal");
   const [focusedCell, setFocusedCell] = useState({ row: 0, col: 0 });
+  const [paused, setPaused] = useState(false);
+  const [explodedCell, setExplodedCell] = useState<Position | null>(null);
+  const [clockStarted, setClockStarted] = useState(false);
   const cellRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  // Recording for the coaching API. Moves are kept in a ref so replaying a
+  // game does not re-render the board on every click. The clock is derived from
+  // wall-clock timestamps, never from counting interval ticks, so a backgrounded
+  // tab or a sleeping device cannot make the timer drift.
+  const movesRef = useRef<GameplayMove[]>([]);
+  const minesRef = useRef<number[]>([]);
+  const startedAtRef = useRef<number | null>(null);
+  const pausedAtRef = useRef<number | null>(null);
+  const pausedTotalRef = useRef(0);
+  const lastChordRef = useRef<{ key: string; at: number } | null>(null);
+  const reportedRef = useRef(false);
 
   const flaggedCount = useMemo(
     () => board.flat().filter((cell) => cell.flagged).length,
@@ -169,34 +203,123 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
   );
   const gameOver = status === "won" || status === "lost";
 
+  // Active play time in milliseconds, excluding paused time. Every value the
+  // player sees or sends to the coach comes from this one function.
+  const activeElapsedMs = useCallback(() => {
+    if (startedAtRef.current === null) return 0;
+    const now = Date.now();
+    const currentPause = pausedAtRef.current === null ? 0 : now - pausedAtRef.current;
+    return Math.max(
+      0,
+      now - startedAtRef.current - pausedTotalRef.current - currentPause,
+    );
+  }, []);
+
   useEffect(() => {
-    if (status !== "playing") return;
-    const timer = window.setInterval(() => setElapsedSeconds((time) => time + 1), 1000);
-    return () => window.clearInterval(timer);
-  }, [status]);
+    if (!clockStarted || gameOver || paused) return;
+    const update = () => setElapsedSeconds(Math.floor(activeElapsedMs() / 1000));
+    update();
+    // The interval only triggers a re-render; the value itself is derived from
+    // timestamps, so throttling in a background tab cannot lose time.
+    const timer = window.setInterval(update, 500);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") update();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [activeElapsedMs, clockStarted, gameOver, paused]);
+
+  const recordMove = useCallback(
+    (row: number, col: number, action: GameplayMove["action"]) => {
+      if (startedAtRef.current === null) {
+        startedAtRef.current = Date.now();
+        setClockStarted(true);
+      }
+      movesRef.current.push({
+        row,
+        col,
+        action,
+        atMs: activeElapsedMs(),
+      });
+    },
+    [activeElapsedMs],
+  );
+
+  const togglePause = useCallback(() => {
+    if (gameOver || !clockStarted) return;
+    if (pausedAtRef.current === null) {
+      pausedAtRef.current = Date.now();
+      setElapsedSeconds(Math.floor(activeElapsedMs() / 1000));
+      setPaused(true);
+    } else {
+      pausedTotalRef.current += Date.now() - pausedAtRef.current;
+      pausedAtRef.current = null;
+      setPaused(false);
+    }
+  }, [activeElapsedMs, clockStarted, gameOver]);
+
+  // Hand the finished game to the coaching flow exactly once.
+  useEffect(() => {
+    if (status !== "won" && status !== "lost") return;
+    if (reportedRef.current) return;
+    reportedRef.current = true;
+
+    // Freeze the clock at the exact value the player saw and send the same
+    // number to the coach, so the timer and the report can never disagree.
+    const finalSeconds = Math.floor(activeElapsedMs() / 1000);
+    setElapsedSeconds(finalSeconds);
+
+    if (!onGameComplete) return;
+    onGameComplete({
+      game: "minesweeper",
+      difficulty: settings.label,
+      rows,
+      columns,
+      mineCount: mines,
+      outcome: status === "won" ? "win" : "loss",
+      durationSeconds: finalSeconds,
+      mines: minesRef.current,
+      moves: movesRef.current,
+    });
+  }, [activeElapsedMs, status, onGameComplete, settings.label, rows, columns, mines]);
 
   const newGame = useCallback(() => {
+    onGameStart?.();
     setBoard(emptyBoard(rows, columns));
     setStatus("ready");
     setFirstClick(true);
     setElapsedSeconds(0);
     setInputMode("reveal");
-  }, [rows, columns]);
+    setPaused(false);
+    setExplodedCell(null);
+    setClockStarted(false);
+    movesRef.current = [];
+    minesRef.current = [];
+    startedAtRef.current = null;
+    pausedAtRef.current = null;
+    pausedTotalRef.current = 0;
+    lastChordRef.current = null;
+    reportedRef.current = false;
+  }, [rows, columns, onGameStart]);
 
   const toggleFlag = useCallback(
     (row: number, col: number) => {
-      if (gameOver) return;
+      if (gameOver || paused) return;
+      const cell = board[row][col];
+      if (cell.revealed) return;
+      const currentFlagCount = board.flat().filter((item) => item.flagged).length;
+      if (!cell.flagged && currentFlagCount >= mines) return;
+      recordMove(row, col, cell.flagged ? "unflag" : "flag");
       setBoard((current) => {
-        const cell = current[row][col];
-        if (cell.revealed) return current;
-        const currentFlagCount = current.flat().filter((item) => item.flagged).length;
-        if (!cell.flagged && currentFlagCount >= mines) return current;
         const next = current.map((line) => line.map((item) => ({ ...item })));
         next[row][col].flagged = !next[row][col].flagged;
         return next;
       });
     },
-    [gameOver, mines],
+    [board, gameOver, mines, paused, recordMove],
   );
 
   const finishIfWon = useCallback(
@@ -212,13 +335,18 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
 
   const revealCell = useCallback(
     (row: number, col: number) => {
-      if (gameOver) return;
+      if (gameOver || paused) return;
       let working = board.map((line) => line.map((cell) => ({ ...cell })));
       if (working[row][col].revealed || working[row][col].flagged) return;
+      recordMove(row, col, "reveal");
 
       if (firstClick) {
         const flags = working.map((line) => line.map((cell) => cell.flagged));
         working = generateBoard(rows, columns, mines, row, col);
+        minesRef.current = working
+          .flat()
+          .map((cell, index) => (cell.mine ? index : -1))
+          .filter((index) => index >= 0);
         working = working.map((line, r) =>
           line.map((cell, c) => ({ ...cell, flagged: flags[r][c] })),
         );
@@ -231,6 +359,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
           line.map((cell) => ({ ...cell, revealed: cell.revealed || cell.mine })),
         );
         setBoard(working);
+        setExplodedCell([row, col]);
         setStatus("lost");
         return;
       }
@@ -239,15 +368,17 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       setBoard(working);
       finishIfWon(working);
     },
-    [board, columns, firstClick, finishIfWon, gameOver, mines, rows],
+    [board, columns, firstClick, finishIfWon, gameOver, mines, paused, recordMove, rows],
   );
 
   // Chording: if both mouse buttons are held on a revealed number (or the middle
   // mouse button is used), reveal all unflagged neighbors only when the adjacent
   // flag count exactly matches the number. A wrongly placed flag can still lose.
+  // Tapping or keyboard-activating a number does the same, so touch players have
+  // a way to chord.
   const chordCell = useCallback(
     (row: number, col: number) => {
-      if (gameOver) return;
+      if (gameOver || paused) return;
       const target = board[row][col];
       if (!target.revealed || target.adjacentMines <= 0) return;
 
@@ -259,9 +390,21 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       const toReveal = neighbors.filter(
         ([r, c]) => !working[r][c].flagged && !working[r][c].revealed,
       );
+      if (toReveal.length === 0) return;
+
+      // A both-button chord also fires a click; ignore the duplicate.
+      const key = `${row},${col}`;
+      const now = Date.now();
+      if (lastChordRef.current?.key === key && now - lastChordRef.current.at < 300) {
+        return;
+      }
+      lastChordRef.current = { key, at: now };
+      recordMove(row, col, "chord");
 
       // If any unflagged neighbor is a mine, chording reveals it and ends the game.
-      if (toReveal.some(([r, c]) => working[r][c].mine)) {
+      const hit = toReveal.find(([r, c]) => working[r][c].mine);
+      if (hit) {
+        setExplodedCell(hit);
         for (const [r, c] of toReveal) {
           if (working[r][c].mine) working[r][c].revealed = true;
         }
@@ -280,7 +423,7 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       setBoard(working);
       finishIfWon(working);
     },
-    [board, finishIfWon, gameOver, rows, columns],
+    [board, finishIfWon, gameOver, paused, recordMove, rows, columns],
   );
 
   const handleContextMenu = (
@@ -342,13 +485,13 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         onNewGame={newGame}
       />
 
-      <div className="game-controls" role="group" aria-label="Cell action mode">
+      <div className="game-controls" role="group" aria-label="Board controls">
         <button
           type="button"
           className={inputMode === "reveal" ? "mode-button active" : "mode-button"}
           aria-pressed={inputMode === "reveal"}
           onClick={() => setInputMode("reveal")}
-          disabled={gameOver}
+          disabled={gameOver || paused}
         >
           <MousePointer2 size={15} aria-hidden="true" /> Reveal
         </button>
@@ -357,9 +500,23 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
           className={inputMode === "flag" ? "mode-button active" : "mode-button"}
           aria-pressed={inputMode === "flag"}
           onClick={() => setInputMode("flag")}
-          disabled={gameOver}
+          disabled={gameOver || paused}
         >
           <FlagTriangleRight size={15} aria-hidden="true" /> Flag
+        </button>
+        <button
+          type="button"
+          className="mode-button pause-button"
+          aria-pressed={paused}
+          onClick={togglePause}
+          disabled={gameOver || !clockStarted}
+        >
+          {paused ? (
+            <Play size={15} aria-hidden="true" />
+          ) : (
+            <Pause size={15} aria-hidden="true" />
+          )}
+          {paused ? "Resume" : "Pause"}
         </button>
       </div>
 
@@ -377,7 +534,8 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
       <div className="board-area">
         <p className="sr-only" id="board-keyboard-instructions">
           Use the arrow keys to move between cells. Press Enter or Space to reveal or flag
-          a cell according to the selected action mode.
+          a cell according to the selected action mode. On a revealed number, Enter or
+          Space chords when the flags around it match.
         </p>
         {columns > 9 && (
           <p className="board-scroll-hint">
@@ -394,7 +552,11 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         >
           {board.map((line, row) =>
             line.map((cell, col) => {
-              const isExploded = status === "lost" && cell.mine && cell.revealed;
+              const isExploded =
+                status === "lost" &&
+                explodedCell !== null &&
+                explodedCell[0] === row &&
+                explodedCell[1] === col;
               const classes = [
                 "cell",
                 cell.revealed ? "revealed" : "unrevealed",
@@ -423,19 +585,33 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
                     cell.flagged
                       ? `Row ${row + 1}, column ${col + 1}, flagged`
                       : cell.revealed
-                        ? `Row ${row + 1}, column ${col + 1}, ${cell.mine ? "mine" : cell.adjacentMines ? `${cell.adjacentMines} neighboring mines` : "empty"}`
+                        ? `Row ${row + 1}, column ${col + 1}, ${
+                            cell.mine
+                              ? isExploded
+                                ? "mine, this ended the game"
+                                : "mine"
+                              : cell.adjacentMines
+                                ? `${cell.adjacentMines} neighboring mines`
+                                : "empty"
+                          }`
                         : `Row ${row + 1}, column ${col + 1}, covered`
                   }
                   onMouseDown={(event) => handleMouseDown(event, row, col)}
                   onFocus={() => setFocusedCell({ row, col })}
                   onKeyDown={(event) => handleCellKeyDown(event, row, col)}
                   onClick={() => {
-                    if (cell.revealed) return;
+                    if (gameOver || paused) return;
+                    if (cell.revealed) {
+                      // Tapping or keyboard-activating a number chords it,
+                      // which also gives touch players a chord gesture.
+                      if (inputMode === "reveal") chordCell(row, col);
+                      return;
+                    }
                     if (inputMode === "flag") toggleFlag(row, col);
                     else revealCell(row, col);
                   }}
                   onContextMenu={(event) => handleContextMenu(event, row, col)}
-                  disabled={gameOver}
+                  disabled={gameOver || paused}
                 >
                   {cell.flagged ? (
                     <Flag className="cell-flag" fill="currentColor" strokeWidth={1.5} />
@@ -460,8 +636,9 @@ export function MinesweeperBoard({ settings }: MinesweeperBoardProps) {
         <span className="board-instructions">
           <MousePointer2 size={14} aria-hidden="true" /> Tap: reveal
           <span className="footer-divider" />
-          <Flag size={13} aria-hidden="true" /> Right-click or Flag mode: flag · Chord:
-          hold left + right on a number
+          <Flag size={13} aria-hidden="true" /> Right-click or Flag mode: flag
+          <span className="footer-divider" />
+          Chord: tap a number, or hold left + right
         </span>
       </div>
     </section>
