@@ -11,3 +11,5 @@
 @import "../styles/game.css";
 @import "../styles/coaching.css";
 @import "../styles/responsive.css";
+/* Visual-only polish for Practice mode. Intentionally scoped so Ranked stays unchanged. */
+@import "../styles/practice-board-polish.css";

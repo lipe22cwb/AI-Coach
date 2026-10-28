@@ -1,0 +1,138 @@
+/*
+ * PRACTICE MODE VISUAL POLISH
+ * Presentation only: no changes to board dimensions, game rules, or coaching.
+ * Keep these selectors scoped to the homepage's practice board so the separate
+ * Ranked page keeps its existing styling.
+ */
+
+/* The difficulty label and native select previously sat against each other. */
+.difficulty-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+.difficulty-row label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 650;
+}
+.difficulty-row .difficulty-select {
+  width: min(100%, 340px);
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #202020;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.difficulty-row .difficulty-select:hover {
+  border-color: #585858;
+}
+.difficulty-row .difficulty-select:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+/* Better-defined sections without changing the game's structure. */
+.play-layout .game-panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.play-layout .game-stats {
+  border-bottom: 1px solid #292929;
+  padding: 17px 22px;
+}
+.play-layout .game-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 14px 22px 4px;
+}
+.play-layout .game-controls .mode-button {
+  min-height: 40px;
+  padding-inline: 15px;
+  font-size: 13px;
+}
+.play-layout .game-controls .mode-button:not(.active):not(.pause-button) {
+  background: #222;
+  color: var(--text-secondary);
+}
+.play-layout .game-controls .mode-button:not(.active):not(.pause-button):hover {
+  background: #303030;
+  color: #fff;
+}
+
+/* IMPORTANT: never size a 30-column board from viewport HEIGHT.
+ * Give each difficulty a comfortable potential cell width, then let the
+ * containing game panel determine the actual maximum width.
+ * Expert now uses the available horizontal space instead of shrinking to 580px.
+ */
+.play-layout .board-area {
+  min-width: 0;
+  padding: 22px 22px 25px;
+}
+.play-layout .minesweeper-board {
+  width: min(100%, calc(var(--board-columns, 16) * 37px));
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 6px;
+  gap: 3px;
+  border: 1px solid #343434;
+  border-radius: 8px;
+  background: #111;
+}
+.play-layout .cell {
+  border-radius: 3px;
+}
+.play-layout .board-footer {
+  flex-wrap: wrap;
+  padding: 0 22px 20px;
+}
+
+@media (max-width: 760px) {
+  .play-layout .board-area {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 10px 17px;
+  }
+  /* Keep cells touch-friendly: pan a 30-column board rather than crushing it. */
+  .play-layout .minesweeper-board {
+    width: max(100%, var(--board-min-width));
+    max-width: none;
+    margin-inline: 0;
+    grid-template-columns: repeat(var(--board-columns), minmax(32px, 1fr));
+    padding: 3px;
+    gap: 2px;
+  }
+}
+
+@media (max-width: 600px) {
+  .difficulty-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .difficulty-row .difficulty-select {
+    width: 100%;
+  }
+  .play-layout .game-stats {
+    padding: 14px 12px;
+  }
+  .play-layout .game-controls {
+    padding: 12px 10px 4px;
+  }
+  .play-layout .game-controls .mode-button {
+    flex: 1 1 90px;
+    padding-inline: 8px;
+  }
+  .play-layout .board-footer {
+    padding: 0 12px 17px;
+  }
+}
