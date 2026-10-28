@@ -30,8 +30,15 @@ if (!rawUrl) {
   try {
     const parsedUrl = new URL(rawUrl);
     if (parsedUrl.protocol !== "https:" || parsedUrl.hostname !== EXPECTED_HOST) {
-      fail(`Supabase URL does not point to the expected Mindsweeper project (${EXPECTED_HOST}).`);
-    } else if (parsedUrl.username || parsedUrl.password || parsedUrl.search || parsedUrl.hash) {
+      fail(
+        `Supabase URL does not point to the expected Mindsweeper project (${EXPECTED_HOST}).`,
+      );
+    } else if (
+      parsedUrl.username ||
+      parsedUrl.password ||
+      parsedUrl.search ||
+      parsedUrl.hash
+    ) {
       fail("Supabase URL should not contain credentials, a query, or a fragment.");
     } else {
       pass(`Supabase URL points to the correct project (${EXPECTED_HOST}).`);
@@ -49,7 +56,9 @@ if (publishable) {
   pass("Browser publishable key is configured.");
 } else if (anon) {
   // Ranked's server client currently reads the PUBLISHABLE_KEY specifically.
-  fail("Only NEXT_PUBLIC_SUPABASE_ANON_KEY is present; Ranked needs NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.");
+  fail(
+    "Only NEXT_PUBLIC_SUPABASE_ANON_KEY is present; Ranked needs NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
+  );
 } else {
   fail("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is missing.");
 }
@@ -61,16 +70,23 @@ if (secret) {
 }
 
 if (secret && ((publishable && secret === publishable) || (anon && secret === anon))) {
-  fail("The server secret is identical to a public key. Check your Supabase API key setup.");
+  fail(
+    "The server secret is identical to a public key. Check your Supabase API key setup.",
+  );
 }
 
-const leakedPublicNames = Object.keys(process.env).filter((name) =>
-  name.startsWith("NEXT_PUBLIC_") &&
-  /(SECRET|SERVICE_ROLE|PRIVATE_KEY|API_TOKEN|OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY)/i.test(name) &&
-  Boolean(process.env[name]?.trim()),
+const leakedPublicNames = Object.keys(process.env).filter(
+  (name) =>
+    name.startsWith("NEXT_PUBLIC_") &&
+    /(SECRET|SERVICE_ROLE|PRIVATE_KEY|API_TOKEN|OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY)/i.test(
+      name,
+    ) &&
+    Boolean(process.env[name]?.trim()),
 );
 if (leakedPublicNames.length > 0) {
-  fail(`Potentially sensitive NEXT_PUBLIC_ variables detected: ${leakedPublicNames.join(", ")}.`);
+  fail(
+    `Potentially sensitive NEXT_PUBLIC_ variables detected: ${leakedPublicNames.join(", ")}.`,
+  );
 } else {
   pass("No obviously sensitive server keys are configured under NEXT_PUBLIC_ names.");
 }
@@ -80,5 +96,7 @@ if (failures) {
   console.error(`\n${failures} failure(s). Fix .env.local, then run this check again.`);
   process.exitCode = 1;
 } else {
-  console.log("\nConfiguration checks passed. This does not replace live database or gameplay testing.");
+  console.log(
+    "\nConfiguration checks passed. This does not replace live database or gameplay testing.",
+  );
 }

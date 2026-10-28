@@ -22,7 +22,10 @@ function escaped(value) {
 }
 
 test("the gameplay baseline is before the existing verified results migration", () => {
-  assert.ok(existsSync(next), "The later results migration must already exist in the repo.");
+  assert.ok(
+    existsSync(next),
+    "The later results migration must already exist in the repo.",
+  );
   assert.ok(file.pathname < next.pathname);
 });
 
@@ -30,27 +33,59 @@ test("the baseline fails closed when the live schema already exists", () => {
   assert.match(sql, /to_regclass\('public\.ranked_matches'\) is not null/i);
   assert.match(sql, /to_regclass\('public\.ranked_verified_results'\) is not null/i);
   assert.match(sql, /raise exception 'Ranked gameplay schema already exists/i);
-  assert.ok(sql.indexOf("$baseline_guard$") < sql.indexOf("create table public.ranked_matches"));
+  assert.ok(
+    sql.indexOf("$baseline_guard$") < sql.indexOf("create table public.ranked_matches"),
+  );
 });
 
 test("three server-owned Ranked tables, foreign keys, and one-active-game index exist", () => {
   for (const table of ["ranked_matches", "ranked_match_state", "ranked_match_moves"]) {
     assert.match(sql, new RegExp(`create table public\\.${table} \\(`, "i"));
-    assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security;`, "i"));
-    assert.match(sql, new RegExp(`revoke all on table public\\.${table} from public, anon, authenticated;`, "i"));
-    assert.match(sql, new RegExp(`grant select, insert, update, delete on public\\.${table} to service_role;`, "i"));
+    assert.match(
+      sql,
+      new RegExp(`alter table public\\.${table} enable row level security;`, "i"),
+    );
+    assert.match(
+      sql,
+      new RegExp(
+        `revoke all on table public\\.${table} from public, anon, authenticated;`,
+        "i",
+      ),
+    );
+    assert.match(
+      sql,
+      new RegExp(
+        `grant select, insert, update, delete on public\\.${table} to service_role;`,
+        "i",
+      ),
+    );
   }
   assert.match(sql, /references auth\.users \(id\) on delete cascade/i);
   assert.match(sql, /create unique index ranked_one_active_match/i);
   assert.match(sql, /where status = 'active'/i);
-  assert.match(sql, /constraint ranked_match_moves_pkey primary key \(match_id, move_number\)/i);
+  assert.match(
+    sql,
+    /constraint ranked_match_moves_pkey primary key \(match_id, move_number\)/i,
+  );
 });
 
 test("the six original functions are present with browser execution revoked", () => {
   for (const [name, signature] of functions) {
     assert.match(sql, new RegExp(`CREATE OR REPLACE FUNCTION public\\.${name}\\(`, "i"));
-    assert.match(sql, new RegExp(`revoke all on function public\\.${name}\\(${escaped(signature)}\\) from public, anon, authenticated;`, "i"));
-    assert.match(sql, new RegExp(`grant execute on function public\\.${name}\\(${escaped(signature)}\\) to service_role;`, "i"));
+    assert.match(
+      sql,
+      new RegExp(
+        `revoke all on function public\\.${name}\\(${escaped(signature)}\\) from public, anon, authenticated;`,
+        "i",
+      ),
+    );
+    assert.match(
+      sql,
+      new RegExp(
+        `grant execute on function public\\.${name}\\(${escaped(signature)}\\) to service_role;`,
+        "i",
+      ),
+    );
   }
   assert.equal((sql.match(/CREATE OR REPLACE FUNCTION public\./gi) ?? []).length, 6);
   assert.equal((sql.match(/\$function\$/g) ?? []).length, 12);

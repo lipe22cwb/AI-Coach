@@ -128,19 +128,17 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
     return false;
   }
 
-  // The single-point rule every Minesweeper coach teaches: a number with as
-  // many flags around it as its value proves its other covered neighbours are
-  // safe; a number with no flags left to place proves they are mines.
+  // The single-point rules use the visible numbers and previously proven
+  // mines/safe squares. A flag by itself is never evidence: the player may
+  // have guessed correctly or incorrectly.
   //
   // On top of that, overlapping constraints are compared: when one number's
   // unknown squares are a subset of another's, the difference between their
   // mine counts decides the extra squares. That generalises patterns such as
   // 1–2–1 and 1–2–2–1, which single-point logic alone cannot solve.
   //
-  // The rules only hold while the flags around a number are correct. A wrong
-  // flag makes the number lie, so the engine refuses to draw any conclusion
-  // from a number that carries one. That keeps every "provably safe" claim
-  // supported by what the player could actually know.
+  // Flags stay inside the unknown set until the numbers independently prove
+  // them. A wrong flag never turns an unproven square into a safe deduction.
 
   type Constraint = { cells: number[]; mines: number };
 
@@ -155,21 +153,17 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
       const value = number[index];
       if (value <= 0) continue;
 
-      let flagged = 0;
+      // Flags are player choices, not proven mines. A lucky flag cannot make
+      // an otherwise uncertain neighbour logically safe.
       let hasWrongFlag = false;
       const hidden: number[] = [];
       for (const near of neighbours(index)) {
-        if (cells[near].flagged) {
-          flagged += 1;
-          if (!mineSet.has(near)) hasWrongFlag = true;
-        } else if (!cells[near].revealed) {
+        if (!cells[near].revealed) {
           hidden.push(near);
+          if (cells[near].flagged && !mineSet.has(near)) hasWrongFlag = true;
         }
       }
-      if (hasWrongFlag) {
-        wrongFlagNumbers += 1;
-        continue;
-      }
+      if (hasWrongFlag) wrongFlagNumbers += 1;
 
       let known = 0;
       const candidates: number[] = [];
@@ -179,7 +173,7 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
       }
       if (candidates.length === 0) continue;
 
-      const remaining = value - flagged - known;
+      const remaining = value - known;
       if (remaining < 0 || remaining > candidates.length) continue;
       constraints.push({ cells: candidates, mines: remaining });
     }
@@ -279,6 +273,8 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
   let sawWrongFlagNumber = false;
 
   for (let position = 0; position < moves.length; position += 1) {
+    // A completed loss ends the game. Ignore any corrupt trailing input.
+    if (fatal) break;
     const move = moves[position];
     const moveNumber = position + 1;
     const row = Math.floor(move.row);
@@ -326,12 +322,13 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
       const adjacentFlags = adjacent.filter((near) => cells[near].flagged).length;
       if (adjacentFlags !== value) continue;
 
-      counts.chords += 1;
-      if (!hasMines) continue;
-
       const targets = adjacent.filter(
         (near) => !cells[near].revealed && !cells[near].flagged,
       );
+      // The actual Ranked/Practice board rejects no-op chords.
+      if (targets.length === 0) continue;
+      counts.chords += 1;
+      if (!hasMines) continue;
       const allProvablySafe = targets.every((square) => safe.has(square));
       if (!allProvablySafe) {
         counts.guesses += 1;
@@ -344,17 +341,21 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
       } else {
         counts.logicalReveals += 1;
       }
+      // Chording is one atomic action. If any unopened neighbour is a mine,
+      // the game is lost before the other neighbours are opened.
+      const hitMine = targets.find((square) => mineSet.has(square));
+      if (hitMine !== undefined) {
+        fatal = {
+          moveNumber,
+          row: rowOf(hitMine, columns),
+          col: colOf(hitMine, columns),
+          avoidable: safe.size > 0,
+          safeAvailable: safe.size,
+        };
+        continue;
+      }
       for (const square of targets) {
-        const hit = revealSquare(square);
-        if (hit && !fatal) {
-          fatal = {
-            moveNumber,
-            row: rowOf(square, columns),
-            col: colOf(square, columns),
-            avoidable: safe.size > 0,
-            safeAvailable: safe.size,
-          };
-        }
+        revealSquare(square);
       }
       continue;
     }
@@ -440,7 +441,7 @@ export function analyzeGameplay(session: GameplaySession): CoachAnalysis {
     }
     if (sawWrongFlagNumber) {
       notes.push(
-        "Numbers next to a wrong flag were ignored: a wrong flag makes a number lie.",
+        "Flags were treated as unproven guesses; deductions used only the visible numbers.",
       );
     }
     if (metrics && metrics.forcedGuesses > 0) {
