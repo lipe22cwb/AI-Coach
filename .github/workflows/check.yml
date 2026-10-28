@@ -26,6 +26,9 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      - name: Run Minesweeper and coaching regression tests
+        run: npm test
+
       - name: Build the prototype
         run: npm run build
 

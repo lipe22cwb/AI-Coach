@@ -12,6 +12,10 @@ import {
 import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import Link from "next/link";
+import { visibleBoardHash } from "@/lib/coach/visible-board-hash";
+import { savePracticeSession } from "@/lib/practice/history";
+import type { PracticeSession } from "@/lib/practice/history";
 import type { DifficultySettings } from "@/lib/game-settings";
 import type { GameplayMove, GameplaySession } from "@/lib/coach/types";
 import type { GameCell } from "./board-fixture";
@@ -197,6 +201,12 @@ export function MinesweeperBoard({
   const lastChordRef = useRef<{ key: string; at: number } | null>(null);
   const reportedRef = useRef(false);
 
+  // The checksum describes only what the player could see after each move.
+  const stampLastMove = useCallback((updatedBoard: GameCell[][]) => {
+    const last = movesRef.current.at(-1);
+    if (last) last.afterHash = visibleBoardHash(updatedBoard);
+  }, []);
+
   const flaggedCount = useMemo(
     () => board.flat().filter((cell) => cell.flagged).length,
     [board],
@@ -272,8 +282,7 @@ export function MinesweeperBoard({
     const finalSeconds = Math.floor(activeElapsedMs() / 1000);
     setElapsedSeconds(finalSeconds);
 
-    if (!onGameComplete) return;
-    onGameComplete({
+    const session: PracticeSession = {
       game: "minesweeper",
       difficulty: settings.label,
       rows,
@@ -281,9 +290,12 @@ export function MinesweeperBoard({
       mineCount: mines,
       outcome: status === "won" ? "win" : "loss",
       durationSeconds: finalSeconds,
-      mines: minesRef.current,
-      moves: movesRef.current,
-    });
+      mines: [...minesRef.current],
+      moves: movesRef.current.map((move) => ({ ...move })),
+    };
+    // Both flows use exactly the same completed recording and duration.
+    savePracticeSession(session);
+    onGameComplete?.(session);
   }, [activeElapsedMs, status, onGameComplete, settings.label, rows, columns, mines]);
 
   const newGame = useCallback(() => {
@@ -313,13 +325,12 @@ export function MinesweeperBoard({
       const currentFlagCount = board.flat().filter((item) => item.flagged).length;
       if (!cell.flagged && currentFlagCount >= mines) return;
       recordMove(row, col, cell.flagged ? "unflag" : "flag");
-      setBoard((current) => {
-        const next = current.map((line) => line.map((item) => ({ ...item })));
-        next[row][col].flagged = !next[row][col].flagged;
-        return next;
-      });
+      const next = board.map((line) => line.map((item) => ({ ...item })));
+      next[row][col].flagged = !cell.flagged;
+      stampLastMove(next);
+      setBoard(next);
     },
-    [board, gameOver, mines, paused, recordMove],
+    [board, gameOver, mines, paused, recordMove, stampLastMove],
   );
 
   const finishIfWon = useCallback(
@@ -358,6 +369,7 @@ export function MinesweeperBoard({
         working = working.map((line) =>
           line.map((cell) => ({ ...cell, revealed: cell.revealed || cell.mine })),
         );
+        stampLastMove(working);
         setBoard(working);
         setExplodedCell([row, col]);
         setStatus("lost");
@@ -365,10 +377,22 @@ export function MinesweeperBoard({
       }
 
       revealArea(working, [[row, col]], rows, columns);
+      stampLastMove(working);
       setBoard(working);
       finishIfWon(working);
     },
-    [board, columns, firstClick, finishIfWon, gameOver, mines, paused, recordMove, rows],
+    [
+      board,
+      columns,
+      firstClick,
+      finishIfWon,
+      gameOver,
+      mines,
+      paused,
+      recordMove,
+      rows,
+      stampLastMove,
+    ],
   );
 
   // Chording: if both mouse buttons are held on a revealed number (or the middle
@@ -414,16 +438,18 @@ export function MinesweeperBoard({
             revealed: cell.revealed || cell.mine,
           })),
         );
+        stampLastMove(lostBoard);
         setBoard(lostBoard);
         setStatus("lost");
         return;
       }
 
       revealArea(working, toReveal, rows, columns);
+      stampLastMove(working);
       setBoard(working);
       finishIfWon(working);
     },
-    [board, finishIfWon, gameOver, paused, recordMove, rows, columns],
+    [board, finishIfWon, gameOver, paused, recordMove, rows, columns, stampLastMove],
   );
 
   const handleContextMenu = (
@@ -528,6 +554,12 @@ export function MinesweeperBoard({
       {status === "lost" && (
         <p className="game-message" role="status">
           Boom! You hit a mine. Start a new game to try again.
+        </p>
+      )}
+
+      {gameOver && (
+        <p className="game-review-link">
+          <Link href="/coaching?source=practice">Review verified game and moves</Link>
         </p>
       )}
 
