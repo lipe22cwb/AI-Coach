@@ -1,0 +1,38 @@
+-- Existing STAGING migration, version confirmed in Supabase history.
+-- This file tracks schema already applied in AI-Coach-Staging; it must not be
+-- applied again there. This is an aggregate cap, not per-client edge/WAF protection.
+begin;
+
+create table if not exists public.coach_public_minute_counters (
+  bucket_start timestamptz primary key,
+  usage_count integer not null check (usage_count >= 1)
+);
+
+alter table public.coach_public_minute_counters enable row level security;
+revoke all on public.coach_public_minute_counters from public, anon, authenticated;
+revoke all on public.coach_public_minute_counters from service_role;
+grant select, insert, update on public.coach_public_minute_counters to service_role;
+
+create or replace function public.reserve_public_coach_request()
+returns boolean
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_bucket timestamptz := pg_catalog.date_trunc('minute', pg_catalog.transaction_timestamp());
+  v_admitted boolean := false;
+begin
+  insert into public.coach_public_minute_counters as c (bucket_start, usage_count)
+  values (v_bucket, 1)
+  on conflict (bucket_start) do update
+    set usage_count = c.usage_count + 1
+    where c.usage_count < 120
+  returning true into v_admitted;
+  return coalesce(v_admitted, false);
+end;
+$$;
+
+revoke all on function public.reserve_public_coach_request() from public, anon, authenticated;
+grant execute on function public.reserve_public_coach_request() to service_role;
+commit;
