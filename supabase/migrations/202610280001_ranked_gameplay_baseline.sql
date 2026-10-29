@@ -430,7 +430,7 @@ BEGIN
                 v_queue := v_queue[2:cardinality(v_queue)];
             END IF;
             IF v_cell = ANY(v_all_revealed)
-               OR v_cell = ANY(v_state.tate.f_positions) THEN
+               OR v_cell = ANY(v_state.flagged_positions) THEN
                 CONTINUE;
             END IF;
             IF v_cell = ANY(v_state.mine_positions) THEN
@@ -453,7 +453,7 @@ BEGIN
                         v_neighbor := v_row * 16 + v_column;
                         IF NOT (v_neighbor = ANY(v_all_revealed))
                            AND NOT (v_neighbor = ANY(v_queue))
-                           AND NOT (v_neighbor = ANY(v_state.tate.f_positions))
+                           AND NOT (v_neighbor = ANY(v_state.flagged_positions))
                            AND NOT (v_neighbor = ANY(v_state.mine_positions)) THEN
                             v_queue := array_append(
                                 v_queue,
@@ -593,7 +593,7 @@ BEGIN
         RAISE EXCEPTION 'Reveal a square before flagging';
     END IF;
     v_position := p_row * 16 + p_column;
-    v_flags := v_state.tate.f_positions;
+    v_flags := v_state.flagged_positions;
     IF v_position = ANY(v_state.revealed_positions) THEN
         RAISE EXCEPTION 'Cannot flag a revealed square';
     END IF;
@@ -610,7 +610,7 @@ BEGIN
         v_action := 'flag';
     END IF;
     UPDATE public.ranked_match_state
-    SET tate.f_positions = v_flags
+    SET flagged_positions = v_flags
     WHERE match_id = p_match_id;
     UPDATE public.ranked_matches
     SET move_count = v_match.move_count + 1
@@ -689,7 +689,7 @@ BEGIN
     WHERE match_id = p_match_id
     FOR UPDATE;
     IF NOT FOUND
-       OR NOT v_state.tirst_move_done
+       OR NOT v_state.first_move_done
        OR v_state.mine_positions IS NULL THEN
         RAISE EXCEPTION 'Ranked board unavailable';
     END IF;
@@ -747,7 +747,7 @@ BEGIN
                 v_queue := v_queue[2:cardinality(v_queue)];
             END IF;
             IF v_cell = ANY(v_all_revealed)
-               OR v_cell = ANY(v_state.tlagged_positions) THEN
+               OR v_cell = ANY(v_state.flagged_positions) THEN
                 CONTINUE;
             END IF;
             IF v_cell = ANY(v_state.mine_positions) THEN
