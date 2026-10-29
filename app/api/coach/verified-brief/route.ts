@@ -1,3 +1,5 @@
+import { guardPublicCoachPost } from "@/lib/coach/public-rate-guard";
+import { checkPublicCoachRateLimit } from "@/lib/coach/public-rate-limit";
 import { buildEvidenceReport } from "@/lib/coach/evidence-report";
 import { readLimitedCoachJson, VERIFIED_MAX_BODY_BYTES } from "@/lib/coach/http-security";
 import {
@@ -11,6 +13,12 @@ export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "no-store" };
 
 export async function POST(request: Request): Promise<Response> {
+  return guardPublicCoachPost(request, checkPublicCoachRateLimit, () =>
+    handleVerifiedBriefPost(request),
+  );
+}
+
+async function handleVerifiedBriefPost(request: Request): Promise<Response> {
   const parsed = await readLimitedCoachJson(request, VERIFIED_MAX_BODY_BYTES);
   if (!parsed.ok) return parsed.response;
 

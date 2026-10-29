@@ -1,3 +1,5 @@
+import { guardPublicCoachPost } from "@/lib/coach/public-rate-guard";
+import { checkPublicCoachRateLimit } from "@/lib/coach/public-rate-limit";
 import { coachGameplay } from "@/lib/coach";
 import { getConfiguredProvider } from "@/lib/coach/providers";
 import { COACH_MAX_BODY_BYTES } from "@/lib/coach/http-security";
@@ -12,11 +14,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
-  return handleCoachPost(request, {
-    validateSession,
-    reservePaidCoachCall,
-    coachGameplay,
-  });
+  return guardPublicCoachPost(request, checkPublicCoachRateLimit, () =>
+    handleCoachPost(request, {
+      validateSession,
+      reservePaidCoachCall,
+      coachGameplay,
+    }),
+  );
 }
 
 export async function GET(): Promise<Response> {
