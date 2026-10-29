@@ -1,5 +1,9 @@
 import { parseNarrative, type CoachNarrative } from "./prompt";
 
+// Server-owned hard caps. Provider billing limits are still required separately.
+const MAX_OUTPUT_TOKENS = 512;
+const MAX_INPUT_CHARS = 14_000;
+
 // One small adapter per AI provider. All three speak plain HTTPS, so the project
 // needs no SDK dependency. Which provider runs is decided by environment
 // variables, and if none is configured the rule coach answers instead.
@@ -56,7 +60,10 @@ export function getConfiguredProvider(): ConfiguredProvider | null {
 }
 
 function timeoutSignal(): { signal: AbortSignal; done: () => void } {
-  const milliseconds = Number(process.env.COACH_TIMEOUT_MS ?? 15000) || 15000;
+  const configured = Number(process.env.COACH_TIMEOUT_MS ?? 15000);
+  const milliseconds = Number.isFinite(configured)
+    ? Math.max(1000, Math.min(15000, configured))
+    : 15000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), milliseconds);
   return { signal: controller.signal, done: () => clearTimeout(timer) };
@@ -64,10 +71,10 @@ function timeoutSignal(): { signal: AbortSignal; done: () => void } {
 
 async function failMessage(response: Response): Promise<string> {
   try {
-    const body = await response.text();
-    return body.slice(0, 300);
+    // Consume no upstream error body; never expose it to callers.
+    return `provider HTTP ${response.status}`;
   } catch {
-    return response.statusText;
+    return "provider request failed";
   }
 }
 
@@ -87,6 +94,7 @@ async function askOpenAI(
     body: JSON.stringify({
       model: provider.model,
       temperature: 0.4,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -118,7 +126,7 @@ async function askAnthropic(
     },
     body: JSON.stringify({
       model: provider.model,
-      max_tokens: 1024,
+      max_tokens: MAX_OUTPUT_TOKENS,
       temperature: 0.4,
       system,
       messages: [{ role: "user", content: user }],
@@ -146,7 +154,11 @@ async function askGemini(
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        responseMimeType: "application/json",
+      },
     }),
   });
   if (!response.ok)
@@ -164,6 +176,9 @@ export async function requestNarrative(
   system: string,
   user: string,
 ): Promise<CoachNarrative | null> {
+  if (system.length + user.length > MAX_INPUT_CHARS) {
+    throw new Error("Coaching prompt exceeded the server input limit.");
+  }
   const { signal, done } = timeoutSignal();
   try {
     const text =

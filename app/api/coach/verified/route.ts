@@ -1,49 +1,23 @@
 import { validateFocusSelection } from "@/lib/coach/evidence-report";
+import { readLimitedCoachJson, VERIFIED_MAX_BODY_BYTES } from "@/lib/coach/http-security";
+import { reservePaidCoachCall } from "@/lib/coach/paid-access";
 import { prepareVerifiedFocusInput } from "@/lib/coach/verified-focus-input";
 import { getConfiguredProvider, requestNarrative } from "@/lib/coach/providers";
 
-// The AI only selects an approved focus and style. The browser displays the
-// verified, deterministic explanations, never model-authored gameplay facts.
-// This endpoint accepts checkpoint-stamped finished Practice games only.
+// Deterministic evidence remains free. Only AI prioritization consumes a quota.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const MAX_RECORDING_LENGTH = 200_000;
-const responseHeaders = { "Cache-Control": "no-store" };
-
+const headers = { "Cache-Control": "no-store" };
 function json(body: unknown, status = 200): Response {
-  return Response.json(body, { status, headers: responseHeaders });
+  return Response.json(body, { status, headers });
 }
 
 export async function POST(request: Request): Promise<Response> {
-  // A cross-site browser request must not trigger a potentially billable model.
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) {
-    return json({ error: "Invalid request origin." }, 403);
-  }
+  const parsed = await readLimitedCoachJson(request, VERIFIED_MAX_BODY_BYTES);
+  if (!parsed.ok) return parsed.response;
 
-  const declaredLength = Number(request.headers.get("content-length") ?? "0");
-  if (declaredLength > MAX_RECORDING_LENGTH) {
-    return json({ error: "Recording is too large." }, 413);
-  }
-
-  let raw: unknown;
-  try {
-    const body = await request.text();
-    if (body.length > MAX_RECORDING_LENGTH) {
-      return json({ error: "Recording is too large." }, 413);
-    }
-    raw = JSON.parse(body);
-  } catch {
-    return json({ error: "Send valid JSON for a finished Practice game." }, 400);
-  }
-
-  // Use the SAME strict parser and replay verification used by the Phase 6
-  // verified-brief boundary. No API call occurs before these checks pass.
-  const prepared = prepareVerifiedFocusInput(raw);
-  if (!prepared.ok) {
-    return json({ error: prepared.error }, prepared.status);
-  }
+  const prepared = prepareVerifiedFocusInput(parsed.value);
+  if (!prepared.ok) return json({ error: prepared.error }, prepared.status);
   const { report } = prepared;
 
   const fallback = {
@@ -51,18 +25,18 @@ export async function POST(request: Request): Promise<Response> {
     style: "step-by-step",
     selectedBy: "rules",
     model: null,
-    note: "The verified analysis chose the focus; no AI provider was needed.",
+    note: "Verified rule coaching selected the focus; AI was not needed or available.",
   };
-  const provider = getConfiguredProvider();
-  if (!provider || report.moments.length === 0) {
+  if (report.moments.length === 0) {
     return json({
       ...fallback,
-      note:
-        report.moments.length === 0
-          ? "No verified moments were available to prioritize."
-          : "No AI provider is configured, so the verified rule coach chose a focus.",
+      note: "No verified moments were available to prioritize.",
     });
   }
+
+  const paidAiReserved = await reservePaidCoachCall();
+  const provider = paidAiReserved ? getConfiguredProvider() : null;
+  if (!provider) return json(fallback);
 
   const choices = report.moments.map((moment) => ({
     id: moment.id,
@@ -75,17 +49,14 @@ export async function POST(request: Request): Promise<Response> {
   }));
 
   try {
-    // The existing provider adapter returns JSON. It can select only one of
-    // our already verified IDs and one of two presentation styles.
     const selection = await requestNarrative(
       provider,
       [
-        "You select ONE teaching priority from already verified Minesweeper findings.",
-        "Use only the allowed moment IDs. Prefer repeatable mistakes over praise; do not manufacture findings.",
-        "Return a JSON object with exactly these keys:",
-        '{"headline":"move-N", "summary":"direct", "strengths":[], "improvements":[], "nextSteps":[]}',
-        "headline must equal exactly one supplied id. summary must be exactly 'direct' or 'step-by-step'.",
-        "Do not write any explanations or extra words. You cannot change the evidence.",
+        "Choose ONE already verified Minesweeper coaching focus.",
+        "Only use supplied moment IDs. Never invent gameplay facts.",
+        'Return JSON exactly: {"headline":"move-N","summary":"direct","strengths":[],"improvements":[],"nextSteps":[]}',
+        "headline must equal a supplied id. summary must be 'direct' or 'step-by-step'.",
+        "Do not add explanations or other text.",
       ].join("\n"),
       JSON.stringify({ available: choices, allowedStyles: ["direct", "step-by-step"] }),
     );
@@ -94,23 +65,15 @@ export async function POST(request: Request): Promise<Response> {
       selection?.headline,
       selection?.summary,
     );
-    if (!checked) {
-      return json({
-        ...fallback,
-        note: "AI selection was outside the allowed evidence; the verified fallback was used.",
-      });
-    }
+    if (!checked) return json(fallback);
     return json({
       focusId: checked.focusId,
       style: checked.style,
       selectedBy: provider.id,
       model: provider.model,
-      note: "AI prioritized a verified moment. All displayed facts and advice remain rule-generated.",
+      note: "AI selected a verified focus. Gameplay facts remain rule-generated.",
     });
   } catch {
-    return json({
-      ...fallback,
-      note: "AI selection was unavailable; verified rule-based focus was used.",
-    });
+    return json(fallback);
   }
 }
