@@ -1,6 +1,7 @@
 import { coachGameplay } from "@/lib/coach";
 import { getConfiguredProvider } from "@/lib/coach/providers";
-import { COACH_MAX_BODY_BYTES, readLimitedCoachJson } from "@/lib/coach/http-security";
+import { COACH_MAX_BODY_BYTES } from "@/lib/coach/http-security";
+import { handleCoachPost } from "@/lib/coach/http-handlers";
 import { reservePaidCoachCall } from "@/lib/coach/paid-access";
 import { SAMPLE_SESSION } from "@/lib/coach/sample-session";
 import { MAX_MOVES, validateSession } from "@/lib/coach/validate";
@@ -11,22 +12,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
-  const parsedBody = await readLimitedCoachJson(request, COACH_MAX_BODY_BYTES);
-  if (!parsedBody.ok) return parsedBody.response;
-
-  const parsed = validateSession(parsedBody.value);
-  if ("error" in parsed) {
-    return Response.json(
-      { error: parsed.error },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
-    );
-  }
-
-  // This call fails closed when missing configuration, no signed-in user,
-  // exhausted quota, or a database/authentication outage.
-  const paidAiReserved = await reservePaidCoachCall();
-  const result = await coachGameplay(parsed.session, paidAiReserved);
-  return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+  return handleCoachPost(request, {
+    validateSession,
+    reservePaidCoachCall,
+    coachGameplay,
+  });
 }
 
 export async function GET(): Promise<Response> {
