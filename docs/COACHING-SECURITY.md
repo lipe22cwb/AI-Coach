@@ -4,6 +4,8 @@
 
 - The rule-based coach and verified deterministic brief remain usable by guests without provider keys. They are NOT billed calls.
 - **Paid AI is disabled by default**, even if `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` is configured.
+- A configured provider key alone never selects a billable model. `COACH_PROVIDER` must explicitly be `openai`, `anthropic`, or `gemini`. `COACH_MODEL` is optional, but if supplied it must exactly match that provider's reviewed allowlist entry in `lib/coach/provider-policy.ts`: `gpt-4o-mini`, `claude-haiku-4-5`, or `gemini-2.5-flash`, respectively. Missing/unknown providers, mismatched models, and blank keys disable paid AI and leave rule-based Coaching available. An unknown model is never automatically substituted with a different paid model.
+- Updating the allowlist is a reviewed code change: confirm current pricing, model availability, and provider account controls before allowing it. The same allowlist is checked again at the outbound provider call boundary.
 - Paid AI requires ALL of: `COACH_PAID_AI_ENABLED=true`, a configured model provider, a valid Supabase session checked via `auth.getUser()`, and an atomic successful reservation from `reserve_coach_ai_request`.
 - Every paid entrypoint (`POST /api/coach` and `POST /api/coach/verified`) shares the SAME database-backed quota: max **3/minute/user**, **10/day/user**, **200/day globally** (UTC). Unauthenticated users, outages, and exhausted quotas get deterministic rule output instead.
 - These limits count **requests reserved** rather than precise consumed tokens, so they are NOT a monetary cap. Before enabling paid AI, configure the provider's billing budget/alerts and restrict the permitted model and keys at the provider.
@@ -26,6 +28,7 @@
 
 - Paid AI is **explicitly opt-in**, not automatically production-ready after installing files.
 - Quotas are a bound on request counts, not actual USD costs. Provider billing controls are mandatory.
+- The model allowlist reduces accidental expensive selection, but does NOT set a hard monetary ceiling. Configure provider-enforced budgets where supported, alerts, and least-privilege API keys independently. Never enable billing solely because these tests pass.
 - Guest deterministic endpoints remain public; deploy an edge-level abuse/traffic limit separately.
 - The older `/api/coach` narrative interface still accepts AI-authored wording when authorized. The newer verified focus path has stricter evidence constraints. Unifying these is a separate product/security task.
 - This migration is NOT applied by the patch installer. Do not execute it directly against an existing project without reviewing migration history and staging tests.

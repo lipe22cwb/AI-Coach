@@ -1,62 +1,29 @@
 import { parseNarrative, type CoachNarrative } from "./prompt";
+import {
+  isApprovedProviderModel,
+  resolveApprovedProvider,
+  type ConfiguredProvider,
+} from "./provider-policy";
+
+export type { ConfiguredProvider, ProviderId } from "./provider-policy";
 
 // Server-owned hard caps. Provider billing limits are still required separately.
 const MAX_OUTPUT_TOKENS = 512;
 const MAX_INPUT_CHARS = 14_000;
 
-// One small adapter per AI provider. All three speak plain HTTPS, so the project
-// needs no SDK dependency. Which provider runs is decided by environment
-// variables, and if none is configured the rule coach answers instead.
-
-export type ProviderId = "openai" | "anthropic" | "gemini";
-
-export type ConfiguredProvider = {
-  id: ProviderId;
-  apiKey: string;
-  model: string;
-};
-
-// Cheap, widely available defaults. Override with COACH_MODEL when a newer
-// model is preferred; nothing else in the code needs to change.
-const DEFAULT_MODELS: Record<ProviderId, string> = {
-  openai: "gpt-4o-mini",
-  anthropic: "claude-haiku-4-5",
-  gemini: "gemini-2.5-flash",
-};
-
-const PROVIDER_ORDER: ProviderId[] = ["openai", "anthropic", "gemini"];
-
-function readKey(id: ProviderId): string | undefined {
-  switch (id) {
-    case "openai":
-      return process.env.OPENAI_API_KEY;
-    case "anthropic":
-      return process.env.ANTHROPIC_API_KEY;
-    case "gemini":
-      return process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
-  }
-}
-
-/**
- * Pick the provider to use.
- *
- * COACH_PROVIDER forces one ("openai", "anthropic" or "gemini"). Without it the
- * first provider that has a key wins, in the order above. Returns null when no
- * key is present, which is a normal, supported state.
- */
+// Only an explicitly selected provider and its approved model may run.
+// Missing or incorrect environment configuration means free rule Coaching.
 export function getConfiguredProvider(): ConfiguredProvider | null {
-  const requested = (process.env.COACH_PROVIDER ?? "").trim().toLowerCase();
-  const modelOverride = process.env.COACH_MODEL?.trim();
-  const ids = PROVIDER_ORDER.includes(requested as ProviderId)
-    ? [requested as ProviderId]
-    : PROVIDER_ORDER;
-  for (const id of ids) {
-    const key = readKey(id);
-    if (key) {
-      return { id, apiKey: key, model: modelOverride || DEFAULT_MODELS[id] };
-    }
-  }
-  return null;
+  return resolveApprovedProvider({
+    provider: process.env.COACH_PROVIDER,
+    model: process.env.COACH_MODEL,
+    keys: {
+      openai: process.env.OPENAI_API_KEY,
+      anthropic: process.env.ANTHROPIC_API_KEY,
+      gemini: process.env.GEMINI_API_KEY,
+      google: process.env.GOOGLE_API_KEY,
+    },
+  });
 }
 
 function timeoutSignal(): { signal: AbortSignal; done: () => void } {
@@ -176,6 +143,15 @@ export async function requestNarrative(
   system: string,
   user: string,
 ): Promise<CoachNarrative | null> {
+  // Second check immediately before the billable network boundary.
+  // Protects even other server code that calls this adapter directly.
+  if (
+    !isApprovedProviderModel(provider.id, provider.model) ||
+    typeof provider.apiKey !== "string" ||
+    !provider.apiKey.trim()
+  ) {
+    throw new Error("Coaching provider or model is not approved.");
+  }
   if (system.length + user.length > MAX_INPUT_CHARS) {
     throw new Error("Coaching prompt exceeded the server input limit.");
   }
