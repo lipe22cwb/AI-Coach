@@ -89,17 +89,25 @@ function checkPrivate(response) {
   assert.equal(response.headers.get("cache-control"), "no-store");
 }
 
-test("the real Next.js POST routes delegate to the handlers under test", () => {
+test("the real Next.js POST routes use rate limiting and delegate to their handlers", () => {
   const legacyRoute = readFileSync(
     new URL("../app/api/coach/route.ts", import.meta.url),
     "utf8",
   );
+
   const verifiedRoute = readFileSync(
     new URL("../app/api/coach/verified/route.ts", import.meta.url),
     "utf8",
   );
-  assert.match(legacyRoute, /return handleCoachPost\(request,/);
-  assert.match(verifiedRoute, /return handleVerifiedCoachPost\(request,/);
+
+  // Both routes must check the shared public rate limit first.
+  assert.match(legacyRoute, /guardPublicCoachPost\(request, checkPublicCoachRateLimit/);
+
+  assert.match(verifiedRoute, /guardPublicCoachPost\(request, checkPublicCoachRateLimit/);
+
+  // Both routes must still call their original coaching handlers.
+  assert.match(legacyRoute, /handleCoachPost\(request,/);
+  assert.match(verifiedRoute, /handleVerifiedCoachPost\(request,/);
 });
 
 test("legacy guest: HTTP 200 with rule report, never provider", async () => {
