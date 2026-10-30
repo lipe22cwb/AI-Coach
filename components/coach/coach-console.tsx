@@ -1,7 +1,7 @@
 "use client";
 
 import { History, Loader2, Play, Sparkles, TriangleAlert } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CoachReportView } from "@/components/coach/coach-report-view";
 import { EvidenceCoachPanel } from "@/components/coach/evidence-coach-panel";
@@ -15,7 +15,11 @@ import { createSettingsRepository } from "@/lib/settings/repository";
 import type { CoachPreferences } from "@/lib/settings/types";
 import { SAMPLE_LOSS_SESSION, SAMPLE_WIN_SESSION } from "@/lib/coach/sample-session";
 import type { CoachResult, GameplaySession } from "@/lib/coach/types";
-import { loadPracticeSession, type PracticeSession } from "@/lib/practice/history";
+import type { PracticeSession } from "@/lib/practice/history";
+import {
+  createPracticeRepository,
+  type PracticeRepository,
+} from "@/lib/practice/repository";
 
 type ProviderStatus = {
   configured: boolean;
@@ -33,13 +37,16 @@ const SAMPLES: Array<{ key: string; label: string; session: GameplaySession }> =
   { key: "win", label: "Analyze a win", session: SAMPLE_WIN_SESSION },
 ];
 
-function loadSelectedPracticeGame(gameId: string | null): {
+async function loadSelectedPracticeGame(
+  repository: PracticeRepository,
+  gameId: string | null,
+): Promise<{
   game: RecordedGame | null;
   message: string;
-} {
+}> {
   // Use the same validated temporary-session store as the Practice Review page.
   // The id is optional; no id means the latest completed Practice game.
-  const value = loadPracticeSession(gameId);
+  const value = await repository.load(gameId);
   if (!value) {
     return {
       game: null,
@@ -91,6 +98,7 @@ export function CoachConsole() {
   }, []);
   const [practiceMessage, setPracticeMessage] = useState("");
   const autoAnalysisStarted = useRef(false);
+  const practiceRepository = useMemo(() => createPracticeRepository(), []);
 
   // Retain the original last-game localStorage and cross-tab updates.
   useEffect(() => {
@@ -178,20 +186,34 @@ export function CoachConsole() {
   // A finished Practice match links here with ?source=practice. Automatically
   // analyse it once on arrival; the player can rerun the report using the button.
   useEffect(() => {
+    let active = true;
     const params = new URLSearchParams(window.location.search);
-    const saved = loadSelectedPracticeGame(params.get("gameId"));
-    setLastGame(saved.game);
-    setPracticeMessage(saved.message);
+    void loadSelectedPracticeGame(practiceRepository, params.get("gameId"))
+      .then((saved) => {
+        if (!active) return;
+        setLastGame(saved.game);
+        setPracticeMessage(saved.message);
 
-    if (params.get("source") === "practice" && !autoAnalysisStarted.current) {
-      autoAnalysisStarted.current = true;
-      if (saved.game) {
-        setSelectedReplay(saved.game.practice);
-      } else {
-        setError(saved.message);
-      }
-    }
-  }, []);
+        if (params.get("source") === "practice" && !autoAnalysisStarted.current) {
+          autoAnalysisStarted.current = true;
+          if (saved.game) {
+            setSelectedReplay(saved.game.practice);
+          } else {
+            setError(saved.message);
+          }
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        const message =
+          "Could not load this Practice recording. Check your connection and try again.";
+        setPracticeMessage(message);
+        if (params.get("source") === "practice") setError(message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [practiceRepository]);
 
   let providerLine: string;
   if (statusUnavailable) {

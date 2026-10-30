@@ -1,7 +1,7 @@
 "use client";
 
 import { Flag, Grid2X2 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { GameCoachReport } from "@/components/coach/game-coach-report";
 import { CoachPreview } from "@/components/play/coach-preview";
@@ -13,17 +13,43 @@ import { saveLastGame } from "@/lib/coach/last-game";
 import type { GameplaySession } from "@/lib/coach/types";
 import { DEFAULT_DIFFICULTY, DIFFICULTY_SETTINGS } from "@/lib/game-settings";
 import type { Difficulty } from "@/lib/game-settings";
+import { createPracticeRepository } from "@/lib/practice/repository";
+import type { PracticeSession } from "@/lib/practice/history";
 
 export default function Home() {
   const [difficulty, setDifficulty] = useState<Difficulty>(DEFAULT_DIFFICULTY);
   const [lastGame, setLastGame] = useState<GameplaySession | null>(null);
+  const [practiceSaveState, setPracticeSaveState] = useState<
+    "idle" | "saving" | "account" | "local" | "error"
+  >("idle");
+  const practiceRepository = useMemo(() => createPracticeRepository(), []);
   const settings = DIFFICULTY_SETTINGS[difficulty];
 
-  // Keep the report on this page and remember the game for the Coaching tab.
-  const handleGameComplete = useCallback((session: GameplaySession) => {
-    setLastGame(session);
-    saveLastGame(session);
-  }, []);
+  // Keep the report responsive while saving the same complete recording through
+  // the repository; local storage is written before any Supabase request.
+  const handleGameComplete = useCallback(
+    (session: PracticeSession) => {
+      setLastGame(session);
+      saveLastGame(session);
+      setPracticeSaveState("saving");
+      void practiceRepository
+        .save(session)
+        .then(async () => {
+          setPracticeSaveState(await practiceRepository.getStorageMode());
+        })
+        .catch(() => setPracticeSaveState("error"));
+    },
+    [practiceRepository],
+  );
+
+  const retryPracticeSync = useCallback(() => {
+    setPracticeSaveState("saving");
+    void practiceRepository
+      .syncPending()
+      .then(async () => setPracticeSaveState(await practiceRepository.getStorageMode()))
+      .catch(() => setPracticeSaveState("error"));
+  }, [practiceRepository]);
+
   const handleGameStart = useCallback(() => setLastGame(null), []);
 
   return (
@@ -97,6 +123,22 @@ export default function Home() {
         </div>
 
         {lastGame ? <GameCoachReport session={lastGame} /> : null}
+        {lastGame && practiceSaveState !== "idle" ? (
+          <p className="practice-save-status" role="status" aria-live="polite">
+            {practiceSaveState === "saving" && "Saving Practice history…"}
+            {practiceSaveState === "account" && "Practice history saved to your account."}
+            {practiceSaveState === "local" &&
+              "Practice history saved in this browser tab."}
+            {practiceSaveState === "error" && (
+              <>
+                Practice history is kept in this browser tab, but account sync failed.{" "}
+                <button type="button" onClick={retryPracticeSync}>
+                  Retry sync
+                </button>
+              </>
+            )}
+          </p>
+        ) : null}
 
         <footer className="page-footer">
           <p>Practice with feedback. Play ranked without live coaching.</p>

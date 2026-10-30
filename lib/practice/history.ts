@@ -116,8 +116,10 @@ export function loadPracticeSession(id?: string | null): PracticeSession | null 
 
 // Call once per finished game. Preserve the full structured move sequence and
 // mine layout so the analysis can reconstruct visible board states later.
-export function savePracticeSession(session: PracticeSession): void {
-  if (typeof window === "undefined" || !isPracticeSession(session)) return;
+export function savePracticeSessionLocally(
+  session: PracticeSession,
+): SavedPracticeSession | null {
+  if (typeof window === "undefined" || !isPracticeSession(session)) return null;
 
   const saved: SavedPracticeSession = {
     ...session,
@@ -137,9 +139,40 @@ export function savePracticeSession(session: PracticeSession): void {
     );
     window.sessionStorage.setItem(RECENT_SESSIONS_KEY, JSON.stringify(history));
     window.sessionStorage.setItem(LAST_PRACTICE_GAME_KEY, JSON.stringify(saved));
+    return saved;
   } catch (error) {
     // Storage is optional for a playable game. Never misrepresent an error as
     // a permanent saved profile or alter a game outcome because of storage.
     console.warn("Could not save this tab's Practice game:", error);
+    return null;
   }
+}
+
+export function removeLocalPracticeSessions(ids: readonly string[]): void {
+  if (typeof window === "undefined" || ids.length === 0) return;
+  const migratedIds = new Set(ids);
+  try {
+    const remaining = loadRecentPracticeSessions().filter(
+      (session) => !migratedIds.has(session.id),
+    );
+    if (remaining.length > 0) {
+      window.sessionStorage.setItem(RECENT_SESSIONS_KEY, JSON.stringify(remaining));
+    } else {
+      window.sessionStorage.removeItem(RECENT_SESSIONS_KEY);
+    }
+
+    const lastRaw = window.sessionStorage.getItem(LAST_PRACTICE_GAME_KEY);
+    if (lastRaw) {
+      const last: unknown = JSON.parse(lastRaw);
+      if (isSavedSession(last) && migratedIds.has(last.id)) {
+        window.sessionStorage.removeItem(LAST_PRACTICE_GAME_KEY);
+      }
+    }
+  } catch (error) {
+    console.warn("Could not remove migrated Practice recordings:", error);
+  }
+}
+
+export function savePracticeSession(session: PracticeSession): void {
+  savePracticeSessionLocally(session);
 }

@@ -4,11 +4,8 @@ import Link from "next/link";
 import { CalendarDays, Clock3, Gamepad2, History, Play, Target } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  loadRecentPracticeSessions,
-  RECENT_SESSION_LIMIT,
-  type SavedPracticeSession,
-} from "@/lib/practice/history";
+import type { SavedPracticeSession } from "@/lib/practice/history";
+import { createPracticeRepository } from "@/lib/practice/repository";
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -28,10 +25,28 @@ function formatDate(value: string): string {
 // rankings, lifetime statistics, improvement trends or verified mistake rates.
 export function PracticeProfile() {
   const [games, setGames] = useState<SavedPracticeSession[] | null>(null);
+  const [storageMode, setStorageMode] = useState<"local" | "account">("local");
+  const [loadError, setLoadError] = useState(false);
+  const repository = useMemo(() => createPracticeRepository(), []);
 
   useEffect(() => {
-    setGames(loadRecentPracticeSessions());
-  }, []);
+    let active = true;
+    void Promise.all([repository.listRecent(), repository.getStorageMode()])
+      .then(([recentGames, mode]) => {
+        if (!active) return;
+        setGames(recentGames);
+        setStorageMode(mode);
+      })
+      .catch(() => {
+        if (active) {
+          setGames([]);
+          setLoadError(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [repository]);
 
   const summary = useMemo(() => {
     const current = games ?? [];
@@ -51,11 +66,15 @@ export function PracticeProfile() {
             Practice Review<span className="title-period">.</span>
           </h1>
           <p className="page-subtitle">
-            Review up to five recently completed Practice games, including Expert.
+            Review your recent completed Practice games, including Expert.
           </p>
         </div>
         <div className="profile-actions">
-          <span className="preview-badge">This browser tab only</span>
+          <span className="preview-badge">
+            {storageMode === "account"
+              ? "Synced to your account"
+              : "This browser tab only"}
+          </span>
           <Link className="profile-play-link" href="/">
             <Gamepad2 size={17} aria-hidden="true" /> Back to Play
           </Link>
@@ -65,7 +84,7 @@ export function PracticeProfile() {
       <section className="profile-summary" aria-label="Current session Practice results">
         <div className="profile-stat">
           <History size={19} aria-hidden="true" />
-          <span>Completed this session</span>
+          <span>Recent completed games</span>
           <strong>{games ? summary.total : "—"}</strong>
         </div>
         <div className="profile-stat">
@@ -89,7 +108,14 @@ export function PracticeProfile() {
           <CalendarDays size={24} aria-hidden="true" />
         </div>
 
-        {games && games.length > 0 ? (
+        {loadError ? (
+          <div className="practice-empty-history" role="alert">
+            <p>
+              Could not load Practice history. Check your connection and refresh this
+              page.
+            </p>
+          </div>
+        ) : games && games.length > 0 ? (
           <div className="recent-games">
             {games.map((game) => (
               <div className="recent-game practice-recent-game" key={game.id}>
@@ -127,11 +153,9 @@ export function PracticeProfile() {
       </section>
 
       <p className="profile-disclaimer">
-        Only the latest {RECENT_SESSION_LIMIT} completed games from this browser tab are
-        kept for testing. Records are temporary and are not synced with an account or used
-        for Ranked. This is not a permanent player profile, a lifetime win rate, or an
-        improvement claim. Coaching decisions must be verified from the recorded board and
-        actions before being presented as facts.
+        {storageMode === "account"
+          ? "Your account keeps up to 100 recent completed Practice games. Practice records are separate from Ranked results. This is not a lifetime win rate or an improvement claim. Coaching decisions are verified from the recorded board and actions."
+          : "Up to five recent completed games are kept in this browser tab until you close it. They are not synced to an account or used for Ranked. This is not a lifetime win rate or an improvement claim. Coaching decisions are verified from the recorded board and actions."}
       </p>
     </main>
   );

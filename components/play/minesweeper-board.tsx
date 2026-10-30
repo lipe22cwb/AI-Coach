@@ -14,10 +14,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Link from "next/link";
 import { visibleBoardHash } from "@/lib/coach/visible-board-hash";
-import { savePracticeSession } from "@/lib/practice/history";
 import type { PracticeSession } from "@/lib/practice/history";
 import type { DifficultySettings } from "@/lib/game-settings";
-import type { GameplayMove, GameplaySession } from "@/lib/coach/types";
+import type { GameplayMove } from "@/lib/coach/types";
 import type { GameCell } from "./board-fixture";
 import { GameStats } from "./game-stats";
 
@@ -27,7 +26,7 @@ type Position = [number, number];
 type MinesweeperBoardProps = {
   settings: DifficultySettings;
   /** Called once when a game ends, with everything the coach needs to replay it. */
-  onGameComplete?: (session: GameplaySession) => void;
+  onGameComplete?: (session: PracticeSession) => void;
   /** Called when a fresh game starts, so the previous report can be cleared. */
   onGameStart?: () => void;
 };
@@ -293,8 +292,7 @@ export function MinesweeperBoard({
       mines: [...minesRef.current],
       moves: movesRef.current.map((move) => ({ ...move })),
     };
-    // Both flows use exactly the same completed recording and duration.
-    savePracticeSession(session);
+    // Parent saves through the repository; analysis receives the same recording.
     onGameComplete?.(session);
   }, [activeElapsedMs, status, onGameComplete, settings.label, rows, columns, mines]);
 
